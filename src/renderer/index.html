@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none';" />
+  <title>IronClaw Companion</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <svg class="logo-icon" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M16 3L4 9V17C4 23.627 9.373 29 16 29C22.627 29 28 23.627 28 17V9L16 3Z"
+                stroke="#e05252" stroke-width="2" stroke-linejoin="round" fill="none"/>
+          <path d="M11 14L14 17L21 10" stroke="#e05252" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="logo-text">IronClaw</span>
+      </div>
+
+      <nav class="sidebar-nav">
+        <button class="nav-btn active" data-tab="chat" title="Chat">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+          <span>Chat</span>
+        </button>
+        <button class="nav-btn" data-tab="jobs" title="Jobs">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
+            <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+          </svg>
+          <span>Jobs</span>
+        </button>
+        <button class="nav-btn" data-tab="memory" title="Memory">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <ellipse cx="12" cy="5" rx="9" ry="3"/>
+            <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/>
+            <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+          </svg>
+          <span>Memory</span>
+        </button>
+        <button class="nav-btn" data-tab="status" title="Status">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+          </svg>
+          <span>Status</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-bottom">
+        <div class="connection-badge" id="connBadge">
+          <span class="conn-dot" id="connDot"></span>
+          <span class="conn-label" id="connLabel">Disconnected</span>
+        </div>
+        <button class="nav-btn" data-tab="settings" title="Settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+          <span>Settings</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+
+      <!-- ── CHAT TAB ─────────────────────────────── -->
+      <section class="tab-panel active" id="tab-chat">
+        <div class="panel-header">
+          <div class="panel-title">
+            <h2>Chat with IronClaw</h2>
+            <span class="model-badge" id="modelBadge">—</span>
+          </div>
+          <div class="panel-actions">
+            <button class="btn btn-ghost" id="clearChatBtn" title="Clear chat">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                <path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+              </svg>
+              Clear
+            </button>
+            <button class="btn btn-ghost" id="openGatewayBtn" title="Open Web Gateway">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+              </svg>
+              Web UI
+            </button>
+          </div>
+        </div>
+
+        <div class="messages-area" id="messagesArea">
+          <div class="welcome-screen" id="welcomeScreen">
+            <div class="welcome-icon">
+              <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" width="64" height="64">
+                <path d="M32 6L8 18V34C8 47.255 18.745 58 32 58C45.255 58 56 47.255 56 34V18L32 6Z"
+                      stroke="#e05252" stroke-width="3" stroke-linejoin="round" fill="none"/>
+                <path d="M22 28L28 34L42 20" stroke="#e05252" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <h3>IronClaw Agent</h3>
+            <p>Your secure, privacy-first AI assistant.<br/>Connect to your local IronClaw instance to start chatting.</p>
+            <div class="quick-actions">
+              <button class="quick-action-btn" data-msg="What can you do?">What can you do?</button>
+              <button class="quick-action-btn" data-msg="Show my active jobs">Active jobs</button>
+              <button class="quick-action-btn" data-msg="Search my memory for recent tasks">Search memory</button>
+              <button class="quick-action-btn" data-msg="What extensions are installed?">Extensions</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="input-area">
+          <div class="input-row">
+            <div class="textarea-wrap">
+              <textarea
+                id="messageInput"
+                placeholder="Message IronClaw... (Enter to send, Shift+Enter for new line)"
+                rows="1"
+                maxlength="8000"
+              ></textarea>
+            </div>
+            <button class="send-btn" id="sendBtn" disabled>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+              </svg>
+            </button>
+          </div>
+          <div class="input-hints">
+            <span id="streamingIndicator" class="streaming-indicator hidden">
+              <span class="dot-pulse"></span> IronClaw is thinking…
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── JOBS TAB ─────────────────────────────── -->
+      <section class="tab-panel" id="tab-jobs">
+        <div class="panel-header">
+          <h2>Parallel Jobs</h2>
+          <button class="btn btn-primary" id="refreshJobsBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+              <polyline points="23 4 23 10 17 10"/>
+              <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+            </svg>
+            Refresh
+          </button>
+        </div>
+        <div class="jobs-grid" id="jobsGrid">
+          <div class="empty-state">
+            <p>No jobs found. Click Refresh to load.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── MEMORY TAB ───────────────────────────── -->
+      <section class="tab-panel" id="tab-memory">
+        <div class="panel-header">
+          <h2>Memory Search</h2>
+        </div>
+        <div class="search-area">
+          <div class="search-row">
+            <input type="text" id="memorySearchInput" placeholder="Search agent memory… (hybrid FTS + vector)" />
+            <button class="btn btn-primary" id="memorySearchBtn">Search</button>
+          </div>
+          <div class="search-hints">
+            <span>Try: "recent tasks", "project decisions", "user preferences"</span>
+          </div>
+        </div>
+        <div class="memory-results" id="memoryResults">
+          <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="40" height="40" opacity="0.3">
+              <ellipse cx="12" cy="5" rx="9" ry="3"/>
+              <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/>
+              <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+            </svg>
+            <p>Search your agent's memory</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── STATUS TAB ───────────────────────────── -->
+      <section class="tab-panel" id="tab-status">
+        <div class="panel-header">
+          <h2>Agent Status</h2>
+          <button class="btn btn-primary" id="refreshStatusBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+              <polyline points="23 4 23 10 17 10"/>
+              <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+            </svg>
+            Refresh
+          </button>
+        </div>
+        <div class="status-grid" id="statusGrid">
+          <div class="status-card">
+            <div class="status-card-title">Connection</div>
+            <div class="status-card-value" id="statusConnection">—</div>
+          </div>
+          <div class="status-card">
+            <div class="status-card-title">Model</div>
+            <div class="status-card-value" id="statusModel">—</div>
+          </div>
+          <div class="status-card">
+            <div class="status-card-title">Version</div>
+            <div class="status-card-value" id="statusVersion">—</div>
+          </div>
+          <div class="status-card">
+            <div class="status-card-title">Uptime</div>
+            <div class="status-card-value" id="statusUptime">—</div>
+          </div>
+        </div>
+        <div class="status-raw">
+          <div class="status-raw-label">Raw Status Response</div>
+          <pre id="statusRaw" class="code-block">Connect to see status data</pre>
+        </div>
+      </section>
+
+      <!-- ── SETTINGS TAB ─────────────────────────── -->
+      <section class="tab-panel" id="tab-settings">
+        <div class="panel-header">
+          <h2>Settings</h2>
+        </div>
+        <div class="settings-form">
+
+          <div class="settings-section">
+            <div class="settings-section-title">🔌 Connection</div>
+            <div class="form-group">
+              <label>Host</label>
+              <input type="text" id="cfgHost" placeholder="127.0.0.1" />
+            </div>
+            <div class="form-group">
+              <label>Port</label>
+              <input type="number" id="cfgPort" placeholder="3000" min="1" max="65535" />
+            </div>
+            <div class="form-group">
+              <label>Auth Token</label>
+              <div class="input-with-toggle">
+                <input type="password" id="cfgToken" placeholder="GATEWAY_AUTH_TOKEN (leave empty if none)" />
+                <button class="toggle-vis-btn" id="toggleTokenBtn">Show</button>
+              </div>
+              <small>Set via <code>GATEWAY_AUTH_TOKEN</code> env var or startup logs.</small>
+            </div>
+            <div class="form-group form-check">
+              <input type="checkbox" id="cfgHttps" />
+              <label for="cfgHttps">Use HTTPS</label>
+            </div>
+            <button class="btn btn-primary" id="testConnectionBtn">Test Connection</button>
+            <span class="test-result" id="testResult"></span>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-title">🎨 Appearance</div>
+            <div class="form-group">
+              <label>Theme</label>
+              <select id="cfgTheme">
+                <option value="dark">Dark (default)</option>
+                <option value="darker">Darker</option>
+                <option value="light">Light</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Font Size: <span id="fontSizeLabel">14</span>px</label>
+              <input type="range" id="cfgFontSize" min="11" max="20" value="14" />
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-title">⚙️ Behavior</div>
+            <div class="form-group form-check">
+              <input type="checkbox" id="cfgMinimize" checked />
+              <label for="cfgMinimize">Minimize to tray on close</label>
+            </div>
+            <div class="form-group form-check">
+              <input type="checkbox" id="cfgNotifications" checked />
+              <label for="cfgNotifications">Desktop notifications</label>
+            </div>
+            <div class="form-group form-check">
+              <input type="checkbox" id="cfgSendOnEnter" checked />
+              <label for="cfgSendOnEnter">Send message on Enter (Shift+Enter for newline)</label>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-title">🔗 Quick Links</div>
+            <div class="quick-links">
+              <a href="#" class="quick-link" id="linkDocs">📚 Documentation</a>
+              <a href="#" class="quick-link" id="linkGithub">🐙 GitHub Repo</a>
+              <a href="#" class="quick-link" id="linkWebGateway">🌐 Open Web Gateway</a>
+              <a href="#" class="quick-link" id="linkNearAI">☁️ NEAR AI Dashboard</a>
+            </div>
+          </div>
+
+          <button class="btn btn-success" id="saveSettingsBtn">Save Settings</button>
+          <span class="save-result" id="saveResult"></span>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
