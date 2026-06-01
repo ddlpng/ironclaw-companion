@@ -1,84 +1,117 @@
 # ⚔️ IronClaw Companion
 
-> **Desktop companion app for your IronClaw AI Agent**  
-> Secure chat, job monitoring, memory search — all in one native desktop app.
+A secure, cross-platform desktop companion app for [IronClaw](https://github.com/nearai/ironclaw) AI Agent — built with Electron.
 
-![IronClaw Companion](assets/icon.svg)
+Connect to your local IronClaw Web Gateway and chat with your AI agent, monitor jobs, search memory, and track connection status — all from a clean native desktop UI.
 
 ---
 
-## ✨ Features
+## 📸 Features
 
-| Feature | Description |
-|---|---|
-| **💬 Chat** | Real-time streaming chat with your IronClaw agent via SSE |
-| **⚡ Parallel Jobs** | Monitor and track all running/pending/completed jobs |
-| **🧠 Memory Search** | Hybrid FTS + vector search over your agent's persistent memory |
-| **📊 Agent Status** | Live connection health, model info, uptime, raw status data |
-| **🔔 Tray + Notifications** | System tray icon with connection status, desktop notifications |
-| **⚙️ Settings** | Configure host/port/token, theme, font size, behavior |
-| **🌐 Quick Links** | Open Web Gateway, NEAR AI Dashboard, GitHub, Docs |
+- 💬 **Real-time chat** with streaming responses (SSE)
+- 📋 **Jobs dashboard** — view active and completed agent tasks
+- 🧠 **Memory search** — query your agent's knowledge base
+- 🔌 **Connection monitor** — live status with auto-reconnect
+- 🌙 **Dark / Light theme** support
+- 🔔 **System tray** — minimize to tray, desktop notifications
+- ⚙️ **Settings** — configure host, port, auth token, font size
+
+---
+
+## 📥 Download
+
+Go to the [**Releases page**](https://github.com/ddlpng/ironclaw-companion/releases/latest) and download the file for your OS:
+
+| Platform | File | Notes |
+|---|---|---|
+| 🐧 Linux (any distro) | `IronClaw.Companion-1.0.0.AppImage` | No install needed — just run |
+| 🐧 Linux (Debian/Ubuntu) | `ironclaw-companion_1.0.0_amd64.deb` | `sudo dpkg -i` to install |
+| 🪟 Windows | `IronClaw.Companion.1.0.0.exe` | Portable — no install needed |
 
 ---
 
 ## 🚀 Quick Start
 
-### Prerequisites
-- Node.js 18+ and npm
-- IronClaw running locally (`ironclaw` CLI)
-- Web Gateway enabled (default: `http://127.0.0.1:3000`)
-
-### Install & Run
+### Linux — AppImage
 ```bash
+chmod +x IronClaw.Companion-1.0.0.AppImage
+./IronClaw.Companion-1.0.0.AppImage
+```
+
+### Linux — .deb
+```bash
+sudo dpkg -i ironclaw-companion_1.0.0_amd64.deb
+# Launch from app menu or:
+ironclaw-companion
+```
+
+### Windows
+Double-click `IronClaw.Companion.1.0.0.exe` — no installation required.
+
+---
+
+## ⚙️ Configuration
+
+1. Open the app → click the **Settings** tab (⚙️)
+2. Fill in your IronClaw Web Gateway details:
+
+| Field | Default | Description |
+|---|---|---|
+| **Host** | `127.0.0.1` | Your IronClaw gateway hostname or IP |
+| **Port** | `3000` | Gateway port |
+| **Auth Token** | *(empty)* | Token if your gateway requires auth |
+| **Use HTTPS** | Off | Enable for TLS connections |
+
+3. Click **Save** — the app connects automatically
+
+### Finding your IronClaw gateway URL
+
+If you're running IronClaw locally with the default settings:
+- Host: `127.0.0.1`
+- Port: `3000`
+- URL: `http://127.0.0.1:3000`
+
+For remote servers, use the server's IP/domain and the port you configured.
+
+---
+
+## 🔒 Security
+
+This app was built with security as a first-class concern:
+
+| Protection | Implementation |
+|---|---|
+| **XSS Prevention** | All agent/user text is HTML-escaped before render; code blocks extracted to safe placeholders first |
+| **URL Injection** | `openExternal` only allows `http://` and `https://` — `file://`, `javascript:` etc. are blocked |
+| **Auth Token Safety** | Token sent via `Authorization: Bearer` header only — never in URL query strings |
+| **IPC Security** | Channel whitelist in preload; listener deduplication prevents memory leaks |
+| **Renderer Sandbox** | `sandbox: true` — renderer runs in Chromium's full process sandbox |
+| **Content Security Policy** | `default-src 'none'`, `connect-src 'none'`, `object-src 'none'`, `base-uri 'none'` |
+| **Atomic Config Writes** | Config saved via temp file + rename — no corruption on crash |
+| **Input Validation** | Host, port, and message validated in both renderer and main process |
+| **No Vulnerabilities** | `npm audit` → 0 vulnerabilities (Electron 42.3.0) |
+
+---
+
+## 🛠️ Build from Source
+
+**Requirements:**
+- Node.js 18+
+- npm 9+
+
+```bash
+git clone https://github.com/ddlpng/ironclaw-companion.git
 cd ironclaw-companion
 npm install
-npm start
+
+# Run in development mode
+npm run dev
+
+# Build for your platform
+npm run build:linux   # AppImage + .deb
+npm run build:win     # Windows installer + portable
+npm run build:mac     # macOS .dmg + .zip
 ```
-
-### Connect
-1. Open **Settings** tab
-2. Set **Host** and **Port** (defaults: `127.0.0.1` : `3000`)
-3. Paste your `GATEWAY_AUTH_TOKEN` from IronClaw startup logs
-4. Click **Test Connection** → Save Settings
-
----
-
-## 🔧 IronClaw Web Gateway Config
-
-In your IronClaw environment:
-```bash
-# Enable Web Gateway (enabled by default)
-GATEWAY_ENABLED=true
-
-# Set a stable auth token (optional, auto-generated if not set)
-export GATEWAY_AUTH_TOKEN="your-secure-token-here"
-
-# Default host/port
-GATEWAY_HOST=127.0.0.1
-GATEWAY_PORT=3000
-```
-
-Get the auto-generated token from IronClaw startup logs:
-```
-[IronClaw] Web Gateway token: <your-token>
-```
-
----
-
-## 🏗️ Build for Distribution
-
-```bash
-# macOS
-npm run build:mac
-
-# Windows
-npm run build:win
-
-# Linux
-npm run build:linux
-```
-
-Outputs go to `dist/` folder.
 
 ---
 
@@ -88,61 +121,25 @@ Outputs go to `dist/` folder.
 ironclaw-companion/
 ├── src/
 │   ├── main.js          # Electron main process
-│   ├── preload.js       # Secure IPC bridge
-│   ├── store.js         # Persistent settings store
+│   ├── preload.js       # Secure IPC bridge (contextBridge)
+│   ├── store.js         # Atomic config persistence
 │   └── renderer/
 │       ├── index.html   # App shell
-│       ├── styles.css   # Theming + layout
-│       └── app.js       # UI logic + streaming chat
-├── assets/
-│   ├── icon.svg         # App icon (source)
-│   ├── tray-icon.svg    # System tray icon
-│   └── generate-icons.sh # Icon build script
+│       ├── app.js       # UI logic
+│       └── styles.css   # Styles (dark/light themes)
+├── assets/              # Icons (SVG, PNG, ICO, ICNS)
 └── package.json
 ```
 
 ---
 
-## 🔌 API Endpoints Used
+## 🤝 Related
 
-| Endpoint | Method | Description |
-|---|---|---|
-| `/api/status` | GET | Agent health + model info |
-| `/api/chat` | POST | Send message (streaming SSE) |
-| `/api/jobs` | GET | List parallel jobs |
-| `/api/memory` | GET | Search agent memory |
-
-All requests use `Authorization: Bearer <token>` when configured.
-
----
-
-## 🎨 Themes
-
-- **Dark** (default) — GitHub-style dark
-- **Darker** — Deep space black
-- **Light** — Clean light mode
-
----
-
-## 🛡️ Security
-
-- Context isolation enabled (`contextIsolation: true`)
-- Node integration disabled in renderer
-- All API calls go through Electron's main process
-- Auth token stored in user's app data directory
-- CSP headers enforced in renderer
-
----
-
-## 🔗 Links
-
-- [IronClaw Docs](https://docs.ironclaw.com)
-- [IronClaw GitHub](https://github.com/nearai/ironclaw)
-- [NEAR AI Dashboard](https://agent.near.ai/)
-- [NEAR AI Cloud](https://cloud.near.ai/)
+- [IronClaw](https://github.com/nearai/ironclaw) — The AI Agent runtime this app connects to
+- [IronClaw Docs](https://docs.ironclaw.com) — Official documentation
 
 ---
 
 ## 📄 License
 
-MIT — Same as IronClaw
+MIT — see [LICENSE](LICENSE)
