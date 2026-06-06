@@ -40,7 +40,47 @@ async function init() {
   setupMemory();
   setupStatus();
   setupConnectionListener();
+  await loadPersistedChatHistory();  // load saved messages from disk
   checkInitialStatus();
+}
+
+// Load persisted chat history from store
+async function loadPersistedChatHistory() {
+  try {
+    const saved = await api.chatHistoryLoad();
+    if (Array.isArray(saved)) {
+      messages = saved;
+      // Render saved messages to UI
+      const area = document.getElementById('messagesArea');
+      const welcome = document.getElementById('welcomeScreen');
+      if (welcome) welcome.remove();
+      
+      if (saved.length > 0) {
+        saved.forEach(msg => {
+          if (msg.role && msg.content) {
+            const el = buildMessageEl(msg.role, msg.content);
+            area.appendChild(el);
+          }
+        });
+        area.scrollTop = area.scrollHeight;
+      } else {
+        area.appendChild(buildWelcomeScreen());
+      }
+    }
+  } catch (e) {
+    console.error('[Chat] Failed to load history:', e);
+    const area = document.getElementById('messagesArea');
+    area.appendChild(buildWelcomeScreen());
+  }
+}
+
+// Persist chat history to store (debounced)
+let _saveHistoryTimer = null;
+function persistChatHistory() {
+  clearTimeout(_saveHistoryTimer);
+  _saveHistoryTimer = setTimeout(() => {
+    api.chatHistorySave(messages).catch(e => console.error('[Chat] Failed to save history:', e));
+  }, 500);  // 500ms debounce
 }
 
 // ─── Theme ─────────────────────────────────────────────────────────────────
@@ -190,9 +230,10 @@ function sendMessage() {
 
   // Add user message
   appendMessage('user', text);
-  messages.push({ role: 'user', content: text });
+  messages.push({ role: 'user', content: text, timestamp: Date.now() });
   // Trim history if it exceeds cap (keep most recent)
   if (messages.length > MAX_MESSAGES) messages = messages.slice(-MAX_MESSAGES);
+  persistChatHistory();
 
   input.value = '';
   input.style.height = 'auto';
@@ -299,7 +340,8 @@ function finalizeStream(streamId, error) {
   } else {
     const content = streamCounters[streamId] || '';
     if (bubble) bubble.innerHTML = formatMessage(content);
-    messages.push({ role: 'agent', content });
+    messages.push({ role: 'agent', content, timestamp: Date.now() });
+    persistChatHistory();
   }
 
   if (timeEl) {
