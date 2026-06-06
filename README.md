@@ -24,9 +24,10 @@ Go to the [**Releases page**](https://github.com/ddlpng/ironclaw-companion/relea
 
 | Platform | File | Notes |
 |---|---|---|
-| 🐧 Linux (any distro) | `IronClaw.Companion-1.0.0.AppImage` | No install needed — just run |
-| 🐧 Linux (Debian/Ubuntu) | `ironclaw-companion_1.0.0_amd64.deb` | `sudo dpkg -i` to install |
-| 🪟 Windows | `IronClaw.Companion.1.0.0.exe` | Portable — no install needed |
+| 🐧 Linux (any distro) | `IronClaw.Companion-1.1.0.AppImage` | No install needed — just run |
+| 🐧 Linux (Debian/Ubuntu) | `ironclaw-companion_1.1.0_amd64.deb` | `sudo dpkg -i` to install |
+
+> **Latest release: v1.1.0** — Security Hardening update. See [Changelog](#-changelog) below.
 
 ---
 
@@ -34,19 +35,16 @@ Go to the [**Releases page**](https://github.com/ddlpng/ironclaw-companion/relea
 
 ### Linux — AppImage
 ```bash
-chmod +x IronClaw.Companion-1.0.0.AppImage
-./IronClaw.Companion-1.0.0.AppImage
+chmod +x "IronClaw Companion-1.1.0.AppImage"
+./"IronClaw Companion-1.1.0.AppImage"
 ```
 
 ### Linux — .deb
 ```bash
-sudo dpkg -i ironclaw-companion_1.0.0_amd64.deb
+sudo dpkg -i ironclaw-companion_1.1.0_amd64.deb
 # Launch from app menu or:
 ironclaw-companion
 ```
-
-### Windows
-Double-click `IronClaw.Companion.1.0.0.exe` — no installation required.
 
 ---
 
@@ -77,19 +75,24 @@ For remote servers, use the server's IP/domain and the port you configured.
 
 ## 🔒 Security
 
-This app was built with security as a first-class concern:
+Built with security as a first-class concern. Every release passes `npm audit` with 0 vulnerabilities.
 
 | Protection | Implementation |
 |---|---|
-| **XSS Prevention** | All agent/user text is HTML-escaped before render; code blocks extracted to safe placeholders first |
+| **XSS Prevention** | All agent/user text HTML-escaped before render; code blocks extracted to safe placeholders first; apostrophes escaped (`&#x27;`) |
+| **IPC Sender Validation** | All IPC handlers verify `event.sender === mainWindow.webContents` — rogue renderers/webviews cannot send commands |
+| **Rate Limiting** | Token-bucket limiter: max 1 chat stream/sec, max 5 memory searches/10s |
+| **Stream ID Enforcement** | `streamId` validated with strict `stream_\d+` regex on both preload and main process |
+| **Buffer & Size Caps** | 10 MB HTTP response cap · 8 MB SSE stream cap · 128 KB per-line buffer guard |
+| **Host Validation** | `0.0.0.0` blocked · token max 2048 chars · `Array.isArray()` guard on config objects |
+| **Store Hardening** | `isSafeKey()` rejects `__proto__`, `constructor`, `prototype` · key max 128 chars · value max 512 KB |
 | **URL Injection** | `openExternal` only allows `http://` and `https://` — `file://`, `javascript:` etc. are blocked |
 | **Auth Token Safety** | Token sent via `Authorization: Bearer` header only — never in URL query strings |
-| **IPC Security** | Channel whitelist in preload; listener deduplication prevents memory leaks |
 | **Renderer Sandbox** | `sandbox: true` — renderer runs in Chromium's full process sandbox |
 | **Content Security Policy** | `default-src 'none'`, `connect-src 'none'`, `object-src 'none'`, `base-uri 'none'` |
-| **Atomic Config Writes** | Config saved via temp file + rename — no corruption on crash |
-| **Input Validation** | Host, port, and message validated in both renderer and main process |
-| **No Vulnerabilities** | `npm audit` → 0 vulnerabilities (Electron 42.3.0) |
+| **Atomic Config Writes** | Config saved via temp file + rename — no corruption on crash · file mode `0o600` (owner-only) |
+| **Memory Caps** | Chat history capped at 200 messages · `formatMessage` capped at 200 KB |
+| **Timer Safety** | GC timers use `.unref()` (won't prevent clean exit) · `isDestroyed()` guard before IPC sends |
 
 ---
 
@@ -130,6 +133,28 @@ ironclaw-companion/
 ├── assets/              # Icons (SVG, PNG, ICO, ICNS)
 └── package.json
 ```
+
+---
+
+## 📋 Changelog
+
+### v1.1.0 — Security Hardening *(2026-06-06)*
+- IPC sender validation (rogue renderer protection)
+- Token-bucket rate limiting on all IPC channels
+- `streamId` regex enforcement on preload + main process
+- `0.0.0.0` host blocked, token max 2048 chars
+- 10 MB HTTP response cap, 8 MB SSE stream cap, 128 KB per-line guard
+- Store: prototype pollution protection, key/value size caps
+- Renderer: `escapeHtml` apostrophe fix, chat history cap (200 msg), message format cap (200 KB)
+- Memory search debounce (400 ms)
+- Timer GC with `.unref()`, `isDestroyed()` guard before IPC sends
+
+### v1.0.0 — Initial Release *(2026-06-01)*
+- Real-time streaming chat (SSE)
+- Jobs dashboard, memory search, status monitor
+- Dark/Light theme, system tray, desktop notifications
+- Atomic config persistence, full XSS prevention
+- `npm audit` 0 vulnerabilities
 
 ---
 
