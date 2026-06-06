@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  width: 1280px; height: 640px;
+  background: #0d1117;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Background grid */
+.grid {
+  position: absolute;
+  inset: 0;
+  background-image: 
+    linear-gradient(rgba(0,200,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,200,255,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* Glow effects */
+.glow-left {
+  position: absolute;
+  width: 500px; height: 500px;
+  background: radial-gradient(circle, rgba(0,150,255,0.12) 0%, transparent 70%);
+  left: -100px; top: 50%;
+  transform: translateY(-50%);
+}
+.glow-right {
+  position: absolute;
+  width: 400px; height: 400px;
+  background: radial-gradient(circle, rgba(0,255,180,0.08) 0%, transparent 70%);
+  right: -50px; top: 50%;
+  transform: translateY(-50%);
+}
+
+.container {
+  display: flex;
+  align-items: center;
+  gap: 80px;
+  padding: 60px;
+  position: relative;
+  z-index: 10;
+  width: 100%;
+}
+
+/* Left: text */
+.left {
+  flex: 1;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(0,200,255,0.1);
+  border: 1px solid rgba(0,200,255,0.3);
+  border-radius: 20px;
+  padding: 6px 16px;
+  font-size: 13px;
+  color: #00c8ff;
+  margin-bottom: 24px;
+  letter-spacing: 0.5px;
+}
+
+.badge-dot {
+  width: 7px; height: 7px;
+  background: #00ff88;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+.title {
+  font-size: 52px;
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 1.1;
+  margin-bottom: 8px;
+}
+.title span {
+  background: linear-gradient(135deg, #00c8ff, #00ff88);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.subtitle {
+  font-size: 20px;
+  color: #8b949e;
+  margin-bottom: 32px;
+  font-weight: 400;
+}
+
+.features {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.feature {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  color: #c9d1d9;
+}
+.feature-icon {
+  font-size: 16px;
+}
+
+.footer {
+  margin-top: 36px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.github-link {
+  font-size: 14px;
+  color: #58a6ff;
+  font-family: monospace;
+}
+.version-badge {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  color: #8b949e;
+}
+
+/* Right: mock window */
+.right {
+  width: 460px;
+  flex-shrink: 0;
+}
+
+.window {
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05);
+}
+
+.titlebar {
+  background: #1c2128;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid #30363d;
+}
+.dot { width: 11px; height: 11px; border-radius: 50%; }
+.dot-r { background: #ff5f57; }
+.dot-y { background: #febc2e; }
+.dot-g { background: #28c840; }
+.win-title {
+  margin-left: 8px;
+  font-size: 12px;
+  color: #8b949e;
+}
+
+.chat-area {
+  padding: 16px;
+}
+
+.msg {
+  margin-bottom: 12px;
+}
+.msg-label {
+  font-size: 10px;
+  color: #58a6ff;
+  margin-bottom: 4px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.msg-label.user { color: #8b949e; }
+.msg-bubble {
+  background: #21262d;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: #c9d1d9;
+  line-height: 1.5;
+}
+.msg-bubble.ai {
+  background: rgba(0,200,255,0.06);
+  border-color: rgba(0,200,255,0.2);
+}
+
+.typing {
+  display: flex;
+  gap: 4px;
+  padding: 10px 12px;
+  background: rgba(0,200,255,0.06);
+  border: 1px solid rgba(0,200,255,0.2);
+  border-radius: 8px;
+  width: fit-content;
+  margin-top: 4px;
+}
+.typing span {
+  width: 5px; height: 5px;
+  background: #00c8ff;
+  border-radius: 50%;
+  opacity: 0.4;
+}
+
+.status-bar {
+  background: #1c2128;
+  border-top: 1px solid #30363d;
+  padding: 6px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 10px;
+  color: #8b949e;
+}
+.status-conn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #3fb950;
+}
+.status-dot {
+  width: 6px; height: 6px;
+  background: #3fb950;
+  border-radius: 50%;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+</style>
+</head>
+<body>
+<div class="grid"></div>
+<div class="glow-left"></div>
+<div class="glow-right"></div>
+
+<div class="container">
+  <div class="left">
+    <div class="badge">
+      <div class="badge-dot"></div>
+      Open Source · Free · No Install
+    </div>
+    <div class="title">IronClaw<br><span>Companion</span></div>
+    <div class="subtitle">Desktop GUI for NEAR AI agent</div>
+    <div class="features">
+      <div class="feature"><span class="feature-icon">⚡</span> Real-time streaming chat</div>
+      <div class="feature"><span class="feature-icon">⌨️</span> Ctrl+K command palette</div>
+      <div class="feature"><span class="feature-icon">📋</span> Jobs dashboard with live progress</div>
+      <div class="feature"><span class="feature-icon">🔍</span> Chat search & markdown export</div>
+    </div>
+    <div class="footer">
+      <span class="github-link">github.com/ddlpng/ironclaw-companion</span>
+      <span class="version-badge">v1.2.0</span>
+    </div>
+  </div>
+
+  <div class="right">
+    <div class="window">
+      <div class="titlebar">
+        <div class="dot dot-r"></div>
+        <div class="dot dot-y"></div>
+        <div class="dot dot-g"></div>
+        <span class="win-title">IronClaw Companion</span>
+      </div>
+      <div class="chat-area">
+        <div class="msg">
+          <div class="msg-label user">You</div>
+          <div class="msg-bubble">What tasks are running?</div>
+        </div>
+        <div class="msg">
+          <div class="msg-label">IronClaw</div>
+          <div class="msg-bubble ai">I have 2 active jobs:<br>• <strong>web_search</strong> — 73% complete<br>• <strong>code_analysis</strong> — queued</div>
+        </div>
+        <div class="msg">
+          <div class="msg-label user">You</div>
+          <div class="msg-bubble">Summarize the results</div>
+        </div>
+        <div class="typing">
+          <span></span><span></span><span></span>
+        </div>
+      </div>
+      <div class="status-bar">
+        <div class="status-conn"><div class="status-dot"></div> Connected</div>
+        <span>~142 tokens</span>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
