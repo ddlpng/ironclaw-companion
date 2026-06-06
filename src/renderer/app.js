@@ -133,20 +133,22 @@ function updateConnectionUI(status, data) {
   const label = document.getElementById('connLabel');
   const sendBtn = document.getElementById('sendBtn');
 
-  dot.className = 'conn-dot ' + status;
+  // Whitelist status values to prevent class injection
+  const safeStatus = ['connected', 'connecting', 'disconnected'].includes(status) ? status : 'disconnected';
+  dot.className = 'conn-dot ' + safeStatus;
 
-  if (status === 'connected') {
+  if (safeStatus === 'connected') {
     label.textContent = 'Connected';
     const input = document.getElementById('messageInput');
     if (!isStreaming) {
       sendBtn.disabled = !input.value.trim();
     }
 
-    // update model badge
-    if (data && data.model) {
-      document.getElementById('modelBadge').textContent = data.model;
+    // update model badge — escape to prevent XSS
+    if (data && data.model && typeof data.model === 'string') {
+      document.getElementById('modelBadge').textContent = data.model.slice(0, 80);
     }
-  } else if (status === 'connecting') {
+  } else if (safeStatus === 'connecting') {
     label.textContent = 'Connecting…';
     sendBtn.disabled = true;
   } else {
@@ -154,6 +156,7 @@ function updateConnectionUI(status, data) {
     sendBtn.disabled = true;
   }
 }
+
 
 // ─── Prompt templates ──────────────────────────────────────────────────────
 const DEFAULT_TEMPLATES = [
@@ -420,7 +423,9 @@ function exportChat() {
   const lines = messages.map(m => {
     const time = m.timestamp ? new Date(m.timestamp).toLocaleString() : '';
     const role = m.role === 'user' ? 'You' : 'IronClaw';
-    return `**${role}** ${time ? `(${time})` : ''}\n\n${m.content}\n`;
+    // Use raw content (not HTML) for markdown export
+    const content = typeof m.content === 'string' ? m.content : '';
+    return `**${role}** ${time ? `(${time})` : ''}\n\n${content}\n`;
   });
   const md = `# IronClaw Chat Export\n_Exported: ${new Date().toLocaleString()}_\n\n---\n\n` + lines.join('\n---\n\n');
   const blob = new Blob([md], { type: 'text/markdown' });
@@ -428,7 +433,10 @@ function exportChat() {
   const a    = document.createElement('a');
   a.href     = url;
   a.download = `ironclaw-chat-${new Date().toISOString().slice(0, 10)}.md`;
+  // Append to DOM briefly to trigger download, then remove
+  document.body.appendChild(a);
   a.click();
+  document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
 
@@ -504,7 +512,10 @@ function setupChat() {
 
   // Setup streaming listeners
   api.onChatStreamChunk(({ streamId, chunk }) => {
+    if (!streamId || typeof chunk !== 'string') return;
     if (streamId !== activeStreamId) return;
+    // Guard: chunk must be a reasonable size
+    if (chunk.length > 65536) return;
     appendToStreamBubble(streamId, chunk);
   });
 
@@ -515,7 +526,9 @@ function setupChat() {
 
   api.onChatStreamError(({ streamId, error }) => {
     if (streamId !== activeStreamId) return;
-    finalizeStream(streamId, error);
+    // Sanitize error message before display
+    const safeError = typeof error === 'string' ? error.slice(0, 200) : 'Stream error';
+    finalizeStream(streamId, safeError);
   });
 
   setupTemplates();
@@ -809,8 +822,11 @@ async function loadJobs() {
     return;
   }
 
-  const jobs = Array.isArray(res.data) ? res.data
+  const rawJobs = Array.isArray(res.data) ? res.data
     : (res.data?.jobs || res.data?.data || []);
+
+  // Limit rendered jobs to prevent DOM flood
+  const jobs = Array.isArray(rawJobs) ? rawJobs.slice(0, 200) : [];
 
   if (!jobs.length) {
     grid.innerHTML = '<div class="empty-state"><p>No jobs found. Your agent has no active or recent jobs.</p></div>';
@@ -825,7 +841,11 @@ async function loadJobs() {
 }
 
 function buildJobCard(job) {
-  const status = (job.status || 'unknown').toLowerCase();
+  // Whitelist safe CSS class values for status to prevent class injection
+  const RAW_STATUS = typeof job.status === 'string' ? job.status.toLowerCase() : 'unknown';
+  const SAFE_STATUSES = new Set(['running', 'queued', 'done', 'failed', 'pending', 'cancelled', 'unknown']);
+  const status = SAFE_STATUSES.has(RAW_STATUS) ? RAW_STATUS : 'unknown';
+
   const card = document.createElement('div');
   card.className = 'job-card';
 
@@ -837,15 +857,19 @@ function buildJobCard(job) {
 
   const title = document.createElement('div');
   title.className = 'job-title';
-  title.textContent = job.title || job.description || job.id || 'Unnamed Job';
+  // Use textContent — never innerHTML — for API-sourced data
+  const rawTitle = job.title || job.description || job.id || 'Unnamed Job';
+  title.textContent = String(rawTitle).slice(0, 200);
 
   const meta = document.createElement('div');
   meta.className = 'job-meta';
   const parts = [];
-  if (job.id) parts.push(`ID: ${job.id}`);
+  if (job.id) parts.push(`ID: ${String(job.id).slice(0, 64)}`);
   if (job.created_at || job.createdAt) {
-    const d = new Date(job.created_at || job.createdAt);
-    parts.push(d.toLocaleString());
+    const ts = job.created_at || job.createdAt;
+    // Validate timestamp before constructing Date
+    const d = new Date(ts);
+    if (!isNaN(d.getTime())) parts.push(d.toLocaleString());
   }
   meta.textContent = parts.join(' · ') || status;
 
@@ -916,20 +940,27 @@ function buildMemoryCard(item) {
   const card = document.createElement('div');
   card.className = 'memory-card';
 
-  const path = document.createElement('div');
-  path.className = 'memory-path';
-  path.textContent = item.path || item.id || 'unknown';
+  const pathEl = document.createElement('div');
+  pathEl.className = 'memory-path';
+  const rawPath = item.path || item.id || 'unknown';
+  pathEl.textContent = String(rawPath).slice(0, 512);
 
   const content = document.createElement('div');
   content.className = 'memory-content';
   const text = item.content || item.text || item.snippet || JSON.stringify(item, null, 2);
-  content.textContent = text.length > 600 ? text.slice(0, 600) + '…' : text;
+  const safeText = typeof text === 'string' ? text : String(text);
+  content.textContent = safeText.length > 600 ? safeText.slice(0, 600) + '…' : safeText;
 
   const score = document.createElement('div');
   score.className = 'memory-score';
-  if (item.score !== undefined) score.textContent = `Relevance: ${(item.score * 100).toFixed(1)}%`;
+  if (item.score !== undefined) {
+    const safeScore = typeof item.score === 'number' && isFinite(item.score)
+      ? Math.min(Math.max(item.score, 0), 1)
+      : 0;
+    score.textContent = `Relevance: ${(safeScore * 100).toFixed(1)}%`;
+  }
 
-  card.appendChild(path);
+  card.appendChild(pathEl);
   card.appendChild(content);
   if (item.score !== undefined) card.appendChild(score);
   return card;

@@ -8,10 +8,11 @@
 
 Built with Electron · Runs locally · Zero cloud dependency
 
-[![Version](https://img.shields.io/badge/version-1.2.0-e05252?style=flat-square)](https://github.com/ddlpng/ironclaw-companion/releases/latest)
+[![Version](https://img.shields.io/badge/version-1.2.1-e05252?style=flat-square)](https://github.com/ddlpng/ironclaw-companion/releases/latest)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-555?style=flat-square)](#-download)
 [![License](https://img.shields.io/badge/license-MIT-555?style=flat-square)](LICENSE)
-[![Security](https://img.shields.io/badge/npm%20audit-0%20vulns-3fb950?style=flat-square)](#-security)
+[![Security](https://img.shields.io/badge/npm%20audit-0%20vulns-3fb950?style=flat-square)](SECURITY.md)
+[![Contributing](https://img.shields.io/badge/contributions-welcome-58a6ff?style=flat-square)](CONTRIBUTING.md)
 
 </div>
 
@@ -75,11 +76,12 @@ IronClaw Companion is a native desktop app that connects to your **local IronCla
 
 | Platform | File | Notes |
 |---|---|---|
-| 🪟 **Windows** | `IronClaw Companion 1.2.0.exe` | Portable — no install, just double-click |
-| 🐧 **Linux** (any) | `IronClaw Companion-1.2.0.AppImage` | No install — `chmod +x` then run |
-| 🐧 **Linux** (Debian/Ubuntu) | `ironclaw-companion_1.2.0_amd64.deb` | `sudo dpkg -i` |
+| 🪟 **Windows** | `IronClaw Companion 1.2.1.exe` | Portable — no install, just double-click |
+| 🐧 **Linux** (any) | `IronClaw Companion-1.2.1.AppImage` | No install — `chmod +x` then run |
+| 🐧 **Linux** (Debian/Ubuntu) | `ironclaw-companion_1.2.1_amd64.deb` | `sudo dpkg -i` |
 
-> **Latest: v1.2.0** — 8 new features including export, copy, search, Ctrl+K palette. See [Changelog](#-changelog).
+> **Latest: v1.2.1** — Security patch (9 IPC hardening fixes). See [Changelog](#-changelog).
+> Previous: v1.2.0 — 8 new features including export, copy, search, Ctrl+K palette.
 
 ---
 
@@ -141,6 +143,8 @@ Hit **Save & Connect** — the app reconnects immediately.
 
 Built with security as a first-class concern. Every release passes `npm audit` with **0 vulnerabilities**.
 
+> Full security policy and vulnerability disclosure: [SECURITY.md](SECURITY.md)
+
 | Protection | Implementation |
 |---|---|
 | **XSS Prevention** | All text HTML-escaped before render; code blocks extracted to safe placeholders first |
@@ -200,6 +204,22 @@ ironclaw-companion/
 
 ## 📋 Changelog
 
+### v1.2.1 — Security Patch *(2026-06-06)*
+
+**9 IPC hardening fixes** (no new features, no behavior changes for normal use):
+
+- 🔒 **IPC sender validation** — added missing `event.sender` guard to `get-config`, `api-status`, `api-jobs`, `open-web-gateway`, `open-external`, `set-connection`, `get-app-version`
+- 🔒 **isDestroyed() guard** — fixed potential IPC send to destroyed window on app shutdown
+- 🔒 **Job status class injection** — whitelisted job status CSS classes to prevent injection
+- 🔒 **Job data length caps** — title/ID/date now length-capped against malicious gateway data
+- 🔒 **Score validation** — memory relevance score clamped to [0,1]; NaN/Infinity rejected
+- 🔒 **Stream chunk guard** — client-side 65KB chunk cap added (defense-in-depth)
+- 🔒 **Error sanitization** — stream error messages now sanitized before display
+- 🔒 **Export anchor fix** — `exportChat()` DOM insertion fixed for reliable downloads
+- 🔒 **Variable shadow fix** — `path` variable renamed to avoid shadowing Node.js `path` module
+
+---
+
 ### v1.2.0 — Power User Features *(2026-06-06)*
 
 **8 new features shipped:**
@@ -230,6 +250,16 @@ ironclaw-companion/
 - Jobs dashboard, memory search, status monitor
 - Dark/Light theme, system tray, desktop notifications
 - Atomic config persistence, full XSS prevention
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Read [CONTRIBUTING.md](CONTRIBUTING.md) to get started.
+
+For deep dives into the internals, see [DEVELOPMENT.md](DEVELOPMENT.md).
+
+Bug reports, feature requests, and questions: use [GitHub Issues](https://github.com/ddlpng/ironclaw-companion/issues) — templates provided.
 
 ---
 

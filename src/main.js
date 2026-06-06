@@ -338,7 +338,9 @@ async function checkConnection() {
       if (connectionStatus !== 'connected') {
         connectionStatus = 'connected';
         updateTrayMenu();
-        mainWindow?.webContents.send('connection-status', { status: 'connected', data: res.body });
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('connection-status', { status: 'connected', data: res.body });
+        }
         showNotification('IronClaw Connected', 'Agent is online and ready.', 'connect');
       }
       return res.body;
@@ -348,7 +350,9 @@ async function checkConnection() {
     if (connectionStatus !== 'disconnected') {
       connectionStatus = 'disconnected';
       updateTrayMenu();
-      mainWindow?.webContents.send('connection-status', { status: 'disconnected', error: err.message });
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('connection-status', { status: 'disconnected', error: err.message });
+      }
     }
     return null;
   }
@@ -452,7 +456,8 @@ ipcMain.handle('api-stats', async (event) => {
 
 // ─── IPC Handlers ──────────────────────────────────────────────────────────────
 
-ipcMain.handle('get-config', () => {
+ipcMain.handle('get-config', (event) => {
+  if (!mainWindow || event.sender !== mainWindow.webContents) return {};
   return store.get('config', {
     host: '127.0.0.1', port: 3000, token: '', useHttps: false,
     minimizeToTray: true, notifications: true, theme: 'dark',
@@ -461,6 +466,7 @@ ipcMain.handle('get-config', () => {
 });
 
 ipcMain.handle('save-config', (event, config) => {
+  if (!mainWindow || event.sender !== mainWindow.webContents) return { ok: false, error: 'unauthorized' };
   if (!config || typeof config !== 'object') return { ok: false, error: 'Invalid config' };
   const errors = validateConnectionConfig(config);
   if (errors.length) return { ok: false, errors };
@@ -477,7 +483,8 @@ ipcMain.handle('save-config', (event, config) => {
   return { ok: true };
 });
 
-ipcMain.handle('api-status', async () => {
+ipcMain.handle('api-status', async (event) => {
+  if (!mainWindow || event.sender !== mainWindow.webContents) return { ok: false, error: 'unauthorized' };
   try {
     const res = await apiRequest('GET', '/api/status');
     return { ok: res.status >= 200 && res.status < 300, data: res.body, status: res.status };
@@ -486,7 +493,8 @@ ipcMain.handle('api-status', async () => {
   }
 });
 
-ipcMain.handle('api-jobs', async () => {
+ipcMain.handle('api-jobs', async (event) => {
+  if (!mainWindow || event.sender !== mainWindow.webContents) return { ok: false, error: 'unauthorized' };
   try {
     const res = await apiRequest('GET', '/api/jobs');
     return { ok: res.status >= 200 && res.status < 300, data: res.body };
@@ -534,7 +542,8 @@ ipcMain.on('chat-stream-start', (event, payload) => {
   );
 });
 
-ipcMain.handle('open-web-gateway', () => {
+ipcMain.handle('open-web-gateway', (event) => {
+  if (!mainWindow || event.sender !== mainWindow.webContents) return;
   const cfg = getConnectionConfig();
   const proto = cfg.useHttps ? 'https' : 'http';
   const url = `${proto}://${cfg.host}:${cfg.port}`;
@@ -542,6 +551,7 @@ ipcMain.handle('open-web-gateway', () => {
 });
 
 ipcMain.handle('open-external', (event, url) => {
+  if (!mainWindow || event.sender !== mainWindow.webContents) return;
   if (typeof url === 'string' && isSafeExternalUrl(url)) {
     shell.openExternal(url);
   }
@@ -553,6 +563,7 @@ ipcMain.handle('get-connection-status', (event) => {
 });
 
 ipcMain.handle('set-connection', (event, cfg) => {
+  if (!mainWindow || event.sender !== mainWindow.webContents) return { ok: false, error: 'unauthorized' };
   if (!cfg || typeof cfg !== 'object') return { ok: false, error: 'Invalid config' };
   const errors = validateConnectionConfig(cfg);
   if (errors.length) return { ok: false, errors };
@@ -567,7 +578,8 @@ ipcMain.handle('set-connection', (event, cfg) => {
 });
 
 // ─── App version ────────────────────────────────────────────────────────────────
-ipcMain.handle('get-app-version', () => {
+ipcMain.handle('get-app-version', (event) => {
+  if (!mainWindow || event.sender !== mainWindow.webContents) return null;
   return app.getVersion();
 });
 
