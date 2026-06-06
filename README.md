@@ -24,14 +24,18 @@ Go to the [**Releases page**](https://github.com/ddlpng/ironclaw-companion/relea
 
 | Platform | File | Notes |
 |---|---|---|
-| 🐧 Linux (any distro) | `IronClaw.Companion-1.1.0.AppImage` | No install needed — just run |
+| 🪟 Windows | `IronClaw Companion 1.1.0.exe` | Portable — no install needed, just run |
+| 🐧 Linux (any distro) | `IronClaw Companion-1.1.0.AppImage` | No install needed — just run |
 | 🐧 Linux (Debian/Ubuntu) | `ironclaw-companion_1.1.0_amd64.deb` | `sudo dpkg -i` to install |
 
-> **Latest release: v1.1.0** — Security Hardening update. See [Changelog](#-changelog) below.
+> **Latest release: v1.1.0** — Chat history persistence + Markdown rendering. See [Changelog](#-changelog) below.
 
 ---
 
 ## 🚀 Quick Start
+
+### Windows — Portable
+Just double-click `IronClaw Companion 1.1.0.exe` — no installation required.
 
 ### Linux — AppImage
 ```bash
@@ -138,15 +142,17 @@ ironclaw-companion/
 
 ## 📋 Changelog
 
-### v1.1.0 — Security Hardening *(2026-06-06)*
+### v1.1.0 — Chat History + Markdown *(2026-06-06)*
+- 💾 **Persistent chat history** — conversations survive app restarts
+- ✨ **Markdown rendering** — bold, `code`, lists, code blocks render properly
+- Auto-save on every message (debounced 500ms), history capped at 200 messages
+- Timestamps stored with each message
 - IPC sender validation (rogue renderer protection)
 - Token-bucket rate limiting on all IPC channels
 - `streamId` regex enforcement on preload + main process
 - `0.0.0.0` host blocked, token max 2048 chars
 - 10 MB HTTP response cap, 8 MB SSE stream cap, 128 KB per-line guard
 - Store: prototype pollution protection, key/value size caps
-- Renderer: `escapeHtml` apostrophe fix, chat history cap (200 msg), message format cap (200 KB)
-- Memory search debounce (400 ms)
 - Timer GC with `.unref()`, `isDestroyed()` guard before IPC sends
 
 ### v1.0.0 — Initial Release *(2026-06-01)*
