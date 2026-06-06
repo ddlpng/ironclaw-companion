@@ -6,7 +6,13 @@ Connect to your local IronClaw Web Gateway and chat with your AI agent, monitor 
 
 ---
 
-## 📸 Features
+## 📸 Screenshot
+
+![IronClaw Companion](assets/screenshot.png)
+
+---
+
+## ✨ Features
 
 - 💬 **Real-time chat** with streaming responses (SSE)
 - 📋 **Jobs dashboard** — view active and completed agent tasks
