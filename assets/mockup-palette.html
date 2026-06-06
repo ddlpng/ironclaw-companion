@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0e0e10; --bg-secondary: #17171a; --bg-tertiary: #1e1e22; --bg-hover: #222226;
+  --border: #2a2a30; --border-subtle: #1e1e24; --accent: #e05252; --accent-glow: rgba(224,82,82,0.08);
+  --text-primary: #e8e8ee; --text-muted: #a0a0b0; --text-dim: #5a5a70;
+  --green: #3fb950; --yellow: #d29922;
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'Cascadia Code', 'Fira Code', monospace;
+  --radius: 8px; --radius-sm: 6px;
+}
+body {
+  font-family: var(--font);
+  background: #080809;
+  display: flex; align-items: center; justify-content: center;
+  min-height: 100vh; padding: 0;
+}
+.window {
+  width: 1100px; height: 700px;
+  background: var(--bg);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  box-shadow: 0 32px 80px rgba(0,0,0,0.7);
+  display: flex; flex-direction: column;
+  overflow: hidden; position: relative;
+}
+.titlebar {
+  height: 38px; background: #0b0b0d;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 14px; gap: 8px; flex-shrink: 0;
+}
+.traffic { display: flex; gap: 6px; }
+.dot { width: 12px; height: 12px; border-radius: 50%; }
+.dot.red { background: #ff5f57; } .dot.yellow { background: #febc2e; } .dot.green { background: #28c840; }
+.titlebar-title { flex: 1; text-align: center; font-size: 12px; color: var(--text-dim); font-weight: 500; }
+.app-body { display: flex; flex: 1; min-height: 0; }
+.sidebar {
+  width: 52px; background: var(--bg-secondary);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; align-items: center;
+  padding: 12px 0; gap: 4px; flex-shrink: 0;
+}
+.nav-logo { font-size: 20px; margin-bottom: 12px; }
+.nav-btn {
+  width: 40px; height: 40px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; color: var(--text-dim);
+}
+.nav-btn.active { background: var(--accent-glow); color: var(--accent); }
+.nav-spacer { flex: 1; }
+.conn-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px rgba(63,185,80,0.6); margin-top: 4px; }
+.main { flex: 1; display: flex; flex-direction: column; min-width: 0; filter: blur(1.5px); opacity: 0.4; }
+.panel-header {
+  height: 48px; padding: 0 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+}
+.panel-title { font-size: 13.5px; font-weight: 600; color: var(--text-primary); flex: 1; }
+.messages-area { flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 16px; overflow: hidden; }
+.input-area { padding: 12px 16px 14px; border-top: 1px solid var(--border); flex-shrink: 0; }
+
+/* PALETTE OVERLAY */
+.palette-overlay {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,0.55);
+  display: flex; align-items: flex-start; justify-content: center;
+  padding-top: 90px; z-index: 100;
+}
+.palette {
+  background: var(--bg-secondary);
+  border: 1px solid #3a3a44;
+  border-radius: 14px;
+  width: 520px;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.03);
+  overflow: hidden;
+}
+.palette-input-wrap {
+  display: flex; align-items: center; gap: 12px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+}
+.palette-input-wrap svg { color: var(--text-dim); flex-shrink: 0; }
+.palette-input {
+  flex: 1; background: none; border: none; outline: none;
+  color: var(--text-primary); font-size: 16px; font-family: var(--font);
+}
+.palette-kbd-hint {
+  font-size: 10.5px; color: var(--text-dim);
+  background: var(--bg-tertiary);
+  padding: 2px 7px; border-radius: 4px;
+  border: 1px solid var(--border);
+  font-family: var(--font-mono);
+}
+.palette-section-label {
+  padding: 10px 18px 4px;
+  font-size: 10px; font-weight: 700;
+  color: var(--text-dim);
+  text-transform: uppercase; letter-spacing: 0.8px;
+}
+.palette-item {
+  display: flex; align-items: center; gap: 14px;
+  padding: 11px 18px; cursor: pointer;
+}
+.palette-item.selected { background: var(--bg-hover); }
+.palette-item-icon { font-size: 17px; width: 26px; text-align: center; flex-shrink: 0; }
+.palette-item-label { flex: 1; font-size: 13.5px; color: var(--text-primary); }
+.palette-item-kbd {
+  font-size: 10.5px; color: var(--text-dim);
+  background: var(--bg-tertiary);
+  padding: 2px 7px; border-radius: 4px;
+  border: 1px solid var(--border);
+  font-family: var(--font-mono);
+}
+.palette-footer {
+  border-top: 1px solid var(--border);
+  padding: 8px 18px;
+  display: flex; gap: 14px; align-items: center;
+}
+.palette-footer span { font-size: 10.5px; color: var(--text-dim); display: flex; align-items: center; gap: 4px; }
+.palette-footer kbd {
+  background: var(--bg-tertiary); border: 1px solid var(--border);
+  border-radius: 3px; padding: 1px 5px;
+  font-family: var(--font-mono); font-size: 10px; color: var(--text-muted);
+}
+</style>
+</head>
+<body>
+<div class="window">
+  <div class="titlebar">
+    <div class="traffic"><div class="dot red"></div><div class="dot yellow"></div><div class="dot green"></div></div>
+    <div class="titlebar-title">⚔️ IronClaw Companion</div>
+  </div>
+  <div class="app-body">
+    <div class="sidebar">
+      <div class="nav-logo">⚔️</div>
+      <div class="nav-btn active">💬</div>
+      <div class="nav-btn">📋</div>
+      <div class="nav-btn">🧠</div>
+      <div class="nav-btn">📊</div>
+      <div class="nav-spacer"></div>
+      <div class="nav-btn">⚙️</div>
+      <div class="conn-dot"></div>
+    </div>
+    <div class="main">
+      <div class="panel-header">
+        <div class="panel-title">Chat</div>
+      </div>
+      <div class="messages-area"></div>
+      <div class="input-area"></div>
+    </div>
+  </div>
+
+  <!-- Command Palette Overlay -->
+  <div class="palette-overlay">
+    <div class="palette">
+      <div class="palette-input-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input class="palette-input" value="" placeholder="Type a command or search…" />
+        <span class="palette-kbd-hint">Ctrl+K</span>
+      </div>
+      <div class="palette-section-label">Navigation</div>
+      <div class="palette-item selected">
+        <span class="palette-item-icon">💬</span>
+        <span class="palette-item-label">Go to Chat</span>
+        <span class="palette-item-kbd">1</span>
+      </div>
+      <div class="palette-item">
+        <span class="palette-item-icon">📋</span>
+        <span class="palette-item-label">Go to Jobs</span>
+        <span class="palette-item-kbd">2</span>
+      </div>
+      <div class="palette-item">
+        <span class="palette-item-icon">🧠</span>
+        <span class="palette-item-label">Go to Memory</span>
+        <span class="palette-item-kbd">3</span>
+      </div>
+      <div class="palette-item">
+        <span class="palette-item-icon">📊</span>
+        <span class="palette-item-label">Go to Status</span>
+        <span class="palette-item-kbd">4</span>
+      </div>
+      <div class="palette-item">
+        <span class="palette-item-icon">⚙️</span>
+        <span class="palette-item-label">Go to Settings</span>
+        <span class="palette-item-kbd">5</span>
+      </div>
+      <div class="palette-section-label">Actions</div>
+      <div class="palette-item">
+        <span class="palette-item-icon">🔍</span>
+        <span class="palette-item-label">Search Chat</span>
+        <span class="palette-item-kbd">Ctrl+F</span>
+      </div>
+      <div class="palette-item">
+        <span class="palette-item-icon">📤</span>
+        <span class="palette-item-label">Export Chat</span>
+        <span class="palette-item-kbd"></span>
+      </div>
+      <div class="palette-item">
+        <span class="palette-item-icon">🗑️</span>
+        <span class="palette-item-label">Clear Chat History</span>
+        <span class="palette-item-kbd"></span>
+      </div>
+      <div class="palette-footer">
+        <span><kbd>↑↓</kbd> Navigate</span>
+        <span><kbd>↵</kbd> Select</span>
+        <span><kbd>Esc</kbd> Close</span>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

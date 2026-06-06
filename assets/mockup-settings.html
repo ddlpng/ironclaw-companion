@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0e0e10; --bg-secondary: #17171a; --bg-tertiary: #1e1e22; --bg-hover: #222226;
+  --border: #2a2a30; --border-subtle: #1e1e24; --accent: #e05252; --accent-glow: rgba(224,82,82,0.08);
+  --text-primary: #e8e8ee; --text-muted: #a0a0b0; --text-dim: #5a5a70;
+  --green: #3fb950;
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'Cascadia Code', 'Fira Code', monospace;
+  --radius: 8px; --radius-sm: 6px;
+}
+body { font-family: var(--font); background: #080809; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+.window { width: 1100px; height: 700px; background: var(--bg); border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 32px 80px rgba(0,0,0,0.7); display: flex; flex-direction: column; overflow: hidden; }
+.titlebar { height: 38px; background: #0b0b0d; border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 14px; gap: 8px; flex-shrink: 0; }
+.traffic { display: flex; gap: 6px; }
+.dot { width: 12px; height: 12px; border-radius: 50%; }
+.dot.red { background: #ff5f57; } .dot.yellow { background: #febc2e; } .dot.green { background: #28c840; }
+.titlebar-title { flex: 1; text-align: center; font-size: 12px; color: var(--text-dim); font-weight: 500; }
+.app-body { display: flex; flex: 1; min-height: 0; }
+.sidebar { width: 52px; background: var(--bg-secondary); border-right: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; padding: 12px 0; gap: 4px; flex-shrink: 0; }
+.nav-logo { font-size: 20px; margin-bottom: 12px; }
+.nav-btn { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; color: var(--text-dim); }
+.nav-btn.active { background: var(--accent-glow); color: var(--accent); }
+.nav-spacer { flex: 1; }
+.conn-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px rgba(63,185,80,0.6); margin-top: 4px; }
+.main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.panel-header { height: 48px; padding: 0 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.panel-title { font-size: 13.5px; font-weight: 600; color: var(--text-primary); flex: 1; }
+.settings-form { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 20px; }
+.settings-section { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+.settings-section-title { font-size: 11.5px; font-weight: 700; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.5px; padding-bottom: 4px; border-bottom: 1px solid var(--border-subtle); }
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-group label { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+.form-group input[type="text"], .form-group input[type="password"], .form-group input[type="number"] {
+  padding: 8px 12px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary); font-size: 13px; font-family: var(--font); outline: none;
+}
+.form-group input:focus { border-color: var(--accent); }
+.form-group small { font-size: 11px; color: var(--text-dim); }
+.form-row { display: flex; gap: 12px; }
+.form-row .form-group { flex: 1; }
+.form-check { flex-direction: row !important; align-items: center; gap: 8px; }
+.form-check input[type="checkbox"] { accent-color: var(--accent); width: 14px; height: 14px; }
+.btn-primary { padding: 8px 18px; background: var(--accent); border: none; border-radius: var(--radius-sm); color: #fff; font-size: 12.5px; font-weight: 600; cursor: pointer; font-family: var(--font); }
+.btn-ghost-sm { padding: 8px 14px; background: none; border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-muted); font-size: 12px; cursor: pointer; font-family: var(--font); }
+.save-result { font-size: 11.5px; color: var(--green); margin-left: 8px; }
+.form-actions { display: flex; align-items: center; padding-top: 4px; gap: 8px; }
+.input-with-toggle { display: flex; gap: 6px; }
+.input-with-toggle input { flex: 1; }
+.toggle-vis-btn { padding: 6px 10px; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-muted); font-size: 11px; cursor: pointer; font-family: var(--font); white-space: nowrap; }
+</style>
+</head>
+<body>
+<div class="window">
+  <div class="titlebar">
+    <div class="traffic"><div class="dot red"></div><div class="dot yellow"></div><div class="dot green"></div></div>
+    <div class="titlebar-title">⚔️ IronClaw Companion</div>
+  </div>
+  <div class="app-body">
+    <div class="sidebar">
+      <div class="nav-logo">⚔️</div>
+      <div class="nav-btn">💬</div>
+      <div class="nav-btn">📋</div>
+      <div class="nav-btn">🧠</div>
+      <div class="nav-btn">📊</div>
+      <div class="nav-spacer"></div>
+      <div class="nav-btn active">⚙️</div>
+      <div class="conn-dot"></div>
+    </div>
+    <div class="main">
+      <div class="panel-header">
+        <div class="panel-title">Settings</div>
+      </div>
+      <div class="settings-form">
+
+        <div class="settings-section">
+          <div class="settings-section-title">Connection</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Host</label>
+              <input type="text" value="127.0.0.1" />
+            </div>
+            <div class="form-group" style="max-width:120px">
+              <label>Port</label>
+              <input type="number" value="3000" />
+            </div>
+          </div>
+          <div class="form-group form-check">
+            <input type="checkbox" id="https" />
+            <label for="https">Use HTTPS (TLS)</label>
+          </div>
+          <div class="form-group">
+            <label>Auth Token</label>
+            <div class="input-with-toggle">
+              <input type="password" value="••••••••••••••••••••" />
+              <button class="toggle-vis-btn">Show</button>
+            </div>
+            <small>Bearer token if your IronClaw gateway requires authentication.</small>
+          </div>
+          <div class="form-actions">
+            <button class="btn-primary">Save &amp; Connect</button>
+            <button class="btn-ghost-sm">Test Connection</button>
+            <span class="save-result">✓ Connected</span>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-section-title">Appearance</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Theme</label>
+              <select style="padding:8px 12px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-size:13px;font-family:var(--font);outline:none">
+                <option selected>Dark</option>
+                <option>Light</option>
+                <option>System</option>
+              </select>
+            </div>
+            <div class="form-group" style="max-width:120px">
+              <label>Font Size</label>
+              <input type="number" value="14" min="10" max="20" />
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-section-title">Chat</div>
+          <div class="form-group form-check">
+            <input type="checkbox" id="enter" checked />
+            <label for="enter">Send on Enter (Shift+Enter for new line)</label>
+          </div>
+          <div class="form-group form-check">
+            <input type="checkbox" id="notif" checked />
+            <label for="notif">Desktop notifications when response completes</label>
+          </div>
+          <div class="form-group form-check">
+            <input type="checkbox" id="tray" checked />
+            <label for="tray">Minimize to system tray on close</label>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

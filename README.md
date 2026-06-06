@@ -17,9 +17,24 @@ Built with Electron · Runs locally · Zero cloud dependency
 
 ---
 
+## 📸 Screenshots
+
 <div align="center">
 
-![IronClaw Companion Screenshot](assets/screenshot.png)
+**Chat — streaming responses, copy button, token counter**
+![Chat](assets/screenshot-chat.png)
+
+**Ctrl+K Command Palette — navigate anything from the keyboard**
+![Command Palette](assets/screenshot-palette.png)
+
+**Ctrl+F Chat Search — highlight matches, navigate with ↑↓**
+![Chat Search](assets/screenshot-search.png)
+
+**Jobs Dashboard — live progress bars, status badges**
+![Jobs](assets/screenshot-jobs.png)
+
+**Settings — full gateway config, theme, chat preferences**
+![Settings](assets/screenshot-settings.png)
 
 </div>
 
