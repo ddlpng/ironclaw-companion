@@ -16,22 +16,61 @@ let notificationCooldown = {};
 
 const DEV_MODE = process.argv.includes('--dev');
 
+// ─── Rate limiter (simple token-bucket per IPC channel) ───────────────────────
+const _rateLimits = {};
+function rateLimit(key, maxCalls, windowMs) {
+  const now = Date.now();
+  if (!_rateLimits[key]) _rateLimits[key] = { calls: [], blocked: false };
+  const bucket = _rateLimits[key];
+  // Evict old entries
+  bucket.calls = bucket.calls.filter(t => now - t < windowMs);
+  if (bucket.calls.length >= maxCalls) return false;
+  bucket.calls.push(now);
+  return true;
+}
+
+// Periodic cleanup — prevents notificationCooldown + _rateLimits from growing unbounded
+setInterval(() => {
+  const now = Date.now();
+  for (const key of Object.keys(notificationCooldown)) {
+    if (now - notificationCooldown[key] > 120_000) delete notificationCooldown[key];
+  }
+  for (const key of Object.keys(_rateLimits)) {
+    const b = _rateLimits[key];
+    b.calls = b.calls.filter(t => now - t < 60_000);
+    if (!b.calls.length) delete _rateLimits[key];
+  }
+}, 60_000).unref(); // .unref() so this timer won't keep the process alive
+
 // ─── Validation helpers ───────────────────────────────────────────────────────
 // Allow only safe hostnames/IPs (no protocol, no path, no special chars)
 const HOSTNAME_RE = /^[a-zA-Z0-9]([a-zA-Z0-9.\-]{0,251}[a-zA-Z0-9])?$/;
 
+// Blocked SSRF-adjacent hosts (0.0.0.0 routes to all interfaces on some OS)
+const BLOCKED_HOSTS = new Set(['0.0.0.0', '0']);
+
 function validateConnectionConfig(cfg) {
   const errors = [];
-  if (!cfg || typeof cfg !== 'object') return ['Invalid config object'];
-  if (!cfg.host || typeof cfg.host !== 'string' || !HOSTNAME_RE.test(cfg.host) || cfg.host.length > 253) {
+  if (!cfg || typeof cfg !== 'object' || Array.isArray(cfg)) return ['Invalid config object'];
+  if (
+    !cfg.host ||
+    typeof cfg.host !== 'string' ||
+    !HOSTNAME_RE.test(cfg.host) ||
+    cfg.host.length > 253 ||
+    BLOCKED_HOSTS.has(cfg.host.toLowerCase())
+  ) {
     errors.push('Invalid host (use hostname or IP, no protocol/path)');
   }
   const port = parseInt(cfg.port, 10);
   if (isNaN(port) || port < 1 || port > 65535) {
     errors.push('Invalid port (must be 1–65535)');
   }
-  if (cfg.token !== undefined && typeof cfg.token !== 'string') {
-    errors.push('Token must be a string');
+  if (cfg.token !== undefined) {
+    if (typeof cfg.token !== 'string') {
+      errors.push('Token must be a string');
+    } else if (cfg.token.length > 2048) {
+      errors.push('Token too long (max 2048 chars)');
+    }
   }
   return errors;
 }
@@ -176,11 +215,27 @@ function apiRequest(method, reqPath, body, timeoutMs = 10000) {
       timeout: timeoutMs,
     };
 
+    const MAX_RESPONSE_BYTES = 10 * 1024 * 1024; // 10 MB hard cap
+
     const lib = cfg.useHttps ? https : http;
     const req = lib.request(options, (res) => {
       let data = '';
-      res.on('data',  (chunk) => { data += chunk; });
-      res.on('end',   () => {
+      let bytesReceived = 0;
+      let aborted = false;
+
+      res.on('data', (chunk) => {
+        bytesReceived += chunk.length;
+        if (bytesReceived > MAX_RESPONSE_BYTES) {
+          aborted = true;
+          req.destroy();
+          reject(new Error('Response too large'));
+          return;
+        }
+        data += chunk;
+      });
+
+      res.on('end', () => {
+        if (aborted) return;
         try {
           resolve({ status: res.statusCode, body: JSON.parse(data) });
         } catch {
@@ -225,12 +280,35 @@ function streamChat(message, onChunk, onDone, onError) {
     timeout:  90000,
   };
 
+  const MAX_STREAM_BYTES  = 8 * 1024 * 1024; // 8 MB total stream cap
+  const MAX_CHUNK_BYTES   = 64 * 1024;         // 64 KB per SSE chunk
+
   const lib = cfg.useHttps ? https : http;
   const req = lib.request(options, (res) => {
     let buffer = '';
+    let totalBytes = 0;
+    let streamAborted = false;
 
     res.on('data', (chunk) => {
+      if (streamAborted) return;
+
+      totalBytes += chunk.length;
+      if (totalBytes > MAX_STREAM_BYTES) {
+        streamAborted = true;
+        req.destroy();
+        onError(new Error('Stream exceeded size limit'));
+        return;
+      }
+
       buffer += chunk.toString();
+      // Prevent unbounded buffer growth from a malicious/buggy server with no newlines
+      if (buffer.length > MAX_CHUNK_BYTES * 2) {
+        streamAborted = true;
+        req.destroy();
+        onError(new Error('SSE line too long'));
+        return;
+      }
+
       const lines = buffer.split('\n');
       buffer = lines.pop(); // keep partial last line
 
@@ -249,8 +327,8 @@ function streamChat(message, onChunk, onDone, onError) {
       }
     });
 
-    res.on('end',   () => onDone());
-    res.on('error', (e) => onError(e));
+    res.on('end',   () => { if (!streamAborted) onDone(); });
+    res.on('error', (e) => { if (!streamAborted) onError(e); });
   });
 
   req.on('error',   (e)  => onError(e));
@@ -360,7 +438,9 @@ ipcMain.handle('api-jobs', async () => {
 
 ipcMain.handle('api-memory-search', async (event, query) => {
   if (typeof query !== 'string') return { ok: false, error: 'Invalid query' };
-  const safeQuery = query.slice(0, 500); // cap query length
+  // Rate limit: max 5 memory searches per 10 seconds
+  if (!rateLimit('memory-search', 5, 10_000)) return { ok: false, error: 'Too many requests — slow down' };
+  const safeQuery = query.slice(0, 500).replace(/[\r\n]/g, ' '); // strip newlines from query string
   try {
     const res = await apiRequest('GET', `/api/memory?q=${encodeURIComponent(safeQuery)}`);
     return { ok: res.status >= 200 && res.status < 300, data: res.body };
@@ -370,21 +450,32 @@ ipcMain.handle('api-memory-search', async (event, query) => {
 });
 
 // Streaming chat
+const STREAM_ID_RE = /^stream_\d+$/; // only allow internally generated stream IDs
 ipcMain.on('chat-stream-start', (event, payload) => {
-  if (!payload || typeof payload !== 'object') return;
+  // Verify the sender is our own renderer (not a rogue renderer/webview)
+  if (!mainWindow || event.sender !== mainWindow.webContents) return;
+
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return;
   const { streamId } = payload;
   let { message } = payload;
 
   // Validate + sanitise in main process (don't trust renderer)
   if (typeof message !== 'string' || !message.trim()) return;
-  if (typeof streamId !== 'string') return;
+  if (typeof streamId !== 'string' || !STREAM_ID_RE.test(streamId)) return;
+
+  // Rate limit: max 1 stream per second (prevents spam)
+  if (!rateLimit('chat-stream', 1, 1_000)) {
+    event.sender.send('chat-stream-error', { streamId, error: 'Sending too fast — please wait a moment' });
+    return;
+  }
+
   message = message.slice(0, 32_000); // hard cap
 
   streamChat(
     message,
-    (chunk) => event.sender.send('chat-stream-chunk', { streamId, chunk }),
-    ()      => event.sender.send('chat-stream-done',  { streamId }),
-    (err)   => event.sender.send('chat-stream-error', { streamId, error: err.message }),
+    (chunk) => { if (mainWindow && !mainWindow.isDestroyed()) event.sender.send('chat-stream-chunk', { streamId, chunk }); },
+    ()      => { if (mainWindow && !mainWindow.isDestroyed()) event.sender.send('chat-stream-done',  { streamId }); },
+    (err)   => { if (mainWindow && !mainWindow.isDestroyed()) event.sender.send('chat-stream-error', { streamId, error: err.message }); },
   );
 });
 
@@ -404,7 +495,10 @@ ipcMain.handle('open-external', (event, url) => {
 });
 
 // Connection management
-ipcMain.handle('get-connection-status', () => connectionStatus);
+ipcMain.handle('get-connection-status', (event) => {
+  if (!mainWindow || event.sender !== mainWindow.webContents) return 'disconnected';
+  return connectionStatus;
+});
 
 ipcMain.handle('set-connection', (event, cfg) => {
   if (!cfg || typeof cfg !== 'object') return { ok: false, error: 'Invalid config' };

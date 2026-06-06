@@ -19,6 +19,7 @@ let config = {
 let streamCounters = {};
 let activeStreamId = null;
 let isStreaming = false;
+const MAX_MESSAGES = 200; // cap chat history to prevent unbounded memory growth
 let messages = []; // chat history
 let jobsRefreshTimer = null;
 
@@ -190,6 +191,8 @@ function sendMessage() {
   // Add user message
   appendMessage('user', text);
   messages.push({ role: 'user', content: text });
+  // Trim history if it exceeds cap (keep most recent)
+  if (messages.length > MAX_MESSAGES) messages = messages.slice(-MAX_MESSAGES);
 
   input.value = '';
   input.style.height = 'auto';
@@ -349,9 +352,14 @@ function showStreamingIndicator(show) {
  * Strategy: escape everything first, then selectively re-introduce
  * only the HTML tags we generated ourselves.
  */
+const MAX_FORMAT_CHARS = 200_000; // 200 KB — prevent DoS from huge agent responses
+
 function formatMessage(text) {
   if (typeof text !== 'string') return '';
   if (!text) return '';
+  if (text.length > MAX_FORMAT_CHARS) {
+    text = text.slice(0, MAX_FORMAT_CHARS) + '\n\n[…response truncated at 200 KB]';
+  }
 
   // Step 1: Extract code blocks BEFORE any other processing
   // Replace them with placeholders so we don't accidentally mangle their content
@@ -389,11 +397,13 @@ function formatMessage(text) {
 }
 
 function escapeHtml(str) {
+  if (typeof str !== 'string') return '';
   return str
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;'); // FIX: escape apostrophes too (defense-in-depth)
 }
 
 // ─── Jobs ──────────────────────────────────────────────────────────────────
@@ -465,14 +475,25 @@ function buildJobCard(job) {
 }
 
 // ─── Memory ────────────────────────────────────────────────────────────────
+function debounce(fn, delayMs) {
+  let timer = null;
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), delayMs);
+  };
+}
+
 function setupMemory() {
   const input = document.getElementById('memorySearchInput');
   const btn = document.getElementById('memorySearchBtn');
+  const debouncedSearch = debounce(searchMemory, 400); // prevent search spam on rapid typing
 
   btn.addEventListener('click', searchMemory);
   input.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') searchMemory();
   });
+  // Optional: also debounce on input (live-search feel, still rate-limited server-side)
+  input.addEventListener('input', debouncedSearch);
 }
 
 async function searchMemory() {

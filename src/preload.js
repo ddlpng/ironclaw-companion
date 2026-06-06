@@ -41,7 +41,8 @@ contextBridge.exposeInMainWorld('ironclawAPI', {
   // Streaming chat
   chatStreamStart: (message, streamId) => {
     if (typeof message  !== 'string' || !message.trim())  return;
-    if (typeof streamId !== 'string' || !streamId)        return;
+    // Enforce stream ID format — must be "stream_<digits>" to match main process validation
+    if (typeof streamId !== 'string' || !/^stream_\d+$/.test(streamId)) return;
     ipcRenderer.send('chat-stream-start', { message, streamId });
   },
   onChatStreamChunk: (cb) => _on('chat-stream-chunk', cb),
