@@ -6,7 +6,6 @@ const { contextBridge, ipcRenderer } = require('electron');
 const _listeners = {};
 
 function _on(channel, cb) {
-  // Remove any previous listener for this channel to prevent accumulation
   if (_listeners[channel]) {
     ipcRenderer.removeListener(channel, _listeners[channel]);
   }
@@ -15,7 +14,7 @@ function _on(channel, cb) {
   ipcRenderer.on(channel, wrapper);
 }
 
-// ─── Whitelist of channels the renderer may listen on (no open-ended access) ─
+// ─── Whitelist of channels the renderer may listen on ────────────────────────
 const ALLOWED_RECEIVE = new Set([
   'connection-status',
   'chat-stream-chunk',
@@ -37,11 +36,19 @@ contextBridge.exposeInMainWorld('ironclawAPI', {
   apiStatus:       ()      => ipcRenderer.invoke('api-status'),
   apiJobs:         ()      => ipcRenderer.invoke('api-jobs'),
   apiMemorySearch: (query) => ipcRenderer.invoke('api-memory-search', query),
+  apiStats:        ()      => ipcRenderer.invoke('api-stats'),
+
+  // Chat history persistence
+  chatHistoryLoad:  ()         => ipcRenderer.invoke('chat-history-load'),
+  chatHistorySave:  (messages) => ipcRenderer.invoke('chat-history-save', messages),
+  chatHistoryClear: ()         => ipcRenderer.invoke('chat-history-clear'),
+
+  // App info
+  getAppVersion: () => ipcRenderer.invoke('get-app-version'),
 
   // Streaming chat
   chatStreamStart: (message, streamId) => {
     if (typeof message  !== 'string' || !message.trim())  return;
-    // Enforce stream ID format — must be "stream_<digits>" to match main process validation
     if (typeof streamId !== 'string' || !/^stream_\d+$/.test(streamId)) return;
     ipcRenderer.send('chat-stream-start', { message, streamId });
   },
@@ -53,7 +60,6 @@ contextBridge.exposeInMainWorld('ironclawAPI', {
   openWebGateway: ()    => ipcRenderer.invoke('open-web-gateway'),
   openExternal:   (url) => ipcRenderer.invoke('open-external', url),
 
-  // Cleanup (optional call on tab teardown)
   removeListeners: (channel) => {
     if (!ALLOWED_RECEIVE.has(channel)) return;
     if (_listeners[channel]) {

@@ -78,21 +78,46 @@
             <span class="model-badge" id="modelBadge">—</span>
           </div>
           <div class="panel-actions">
+            <button class="btn btn-ghost" id="searchChatBtn" title="Search chat (Ctrl+F)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              Search
+            </button>
+            <button class="btn btn-ghost" id="exportChatBtn" title="Export chat">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              Export
+            </button>
             <button class="btn btn-ghost" id="clearChatBtn" title="Clear chat">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
                 <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
                 <path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
               </svg>
               Clear
             </button>
             <button class="btn btn-ghost" id="openGatewayBtn" title="Open Web Gateway">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
                 <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
                 <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
               </svg>
               Web UI
             </button>
           </div>
+        </div>
+
+        <!-- Chat search bar -->
+        <div class="chat-search-bar" id="chatSearchBar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" style="color:var(--text-dim)">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input type="text" id="chatSearchInput" placeholder="Search messages…" autocomplete="off" />
+          <span class="chat-search-count" id="chatSearchCount"></span>
+          <button class="btn-icon" id="chatSearchPrev" title="Previous">↑</button>
+          <button class="btn-icon" id="chatSearchNext" title="Next">↓</button>
+          <button class="btn-icon" id="chatSearchClose" title="Close (Esc)">✕</button>
         </div>
 
         <div class="messages-area" id="messagesArea">
@@ -124,6 +149,15 @@
                 rows="1"
                 maxlength="8000"
               ></textarea>
+              <div class="input-extras">
+                <button class="templates-btn" id="templatesBtn" title="Prompt templates">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13">
+                    <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+                    <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+                  </svg>
+                </button>
+              </div>
+              <div class="templates-dropdown" id="templatesDropdown" style="display:none"></div>
             </div>
             <button class="send-btn" id="sendBtn" disabled>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
@@ -135,6 +169,32 @@
             <span id="streamingIndicator" class="streaming-indicator hidden">
               <span class="dot-pulse"></span> IronClaw is thinking…
             </span>
+            <span class="token-counter" id="tokenCounter"></span>
+          </div>
+        </div>
+
+        <!-- Confirm clear modal -->
+        <div class="modal-overlay" id="clearModal" style="display:none">
+          <div class="modal">
+            <h3>Clear chat history?</h3>
+            <p>This will permanently delete all messages in this conversation. This cannot be undone.</p>
+            <div class="modal-actions">
+              <button class="btn btn-ghost" id="clearCancelBtn">Cancel</button>
+              <button class="btn btn-primary" id="clearConfirmBtn">Clear</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Command palette (Ctrl+K) -->
+        <div class="palette-overlay" id="paletteOverlay" style="display:none">
+          <div class="palette">
+            <div class="palette-input-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              <input class="palette-input" id="paletteInput" placeholder="Type a command or search…" autocomplete="off" />
+            </div>
+            <div class="palette-results" id="paletteResults"></div>
           </div>
         </div>
       </section>

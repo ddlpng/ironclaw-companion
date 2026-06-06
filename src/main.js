@@ -22,14 +22,13 @@ function rateLimit(key, maxCalls, windowMs) {
   const now = Date.now();
   if (!_rateLimits[key]) _rateLimits[key] = { calls: [], blocked: false };
   const bucket = _rateLimits[key];
-  // Evict old entries
   bucket.calls = bucket.calls.filter(t => now - t < windowMs);
   if (bucket.calls.length >= maxCalls) return false;
   bucket.calls.push(now);
   return true;
 }
 
-// Periodic cleanup — prevents notificationCooldown + _rateLimits from growing unbounded
+// Periodic cleanup
 setInterval(() => {
   const now = Date.now();
   for (const key of Object.keys(notificationCooldown)) {
@@ -40,13 +39,10 @@ setInterval(() => {
     b.calls = b.calls.filter(t => now - t < 60_000);
     if (!b.calls.length) delete _rateLimits[key];
   }
-}, 60_000).unref(); // .unref() so this timer won't keep the process alive
+}, 60_000).unref();
 
 // ─── Validation helpers ───────────────────────────────────────────────────────
-// Allow only safe hostnames/IPs (no protocol, no path, no special chars)
 const HOSTNAME_RE = /^[a-zA-Z0-9]([a-zA-Z0-9.\-]{0,251}[a-zA-Z0-9])?$/;
-
-// Blocked SSRF-adjacent hosts (0.0.0.0 routes to all interfaces on some OS)
 const BLOCKED_HOSTS = new Set(['0.0.0.0', '0']);
 
 function validateConnectionConfig(cfg) {
@@ -75,7 +71,6 @@ function validateConnectionConfig(cfg) {
   return errors;
 }
 
-// Only allow http/https external URLs — no file://, javascript:, etc.
 function isSafeExternalUrl(url) {
   try {
     const parsed = new URL(url);
@@ -98,17 +93,15 @@ function createMainWindow() {
     minHeight: 560,
     title: 'IronClaw Companion',
     backgroundColor: '#0d1117',
-    // FIX: frame must be true (default) with hiddenInset on macOS.
-    // Setting frame:false on macOS hides traffic-light buttons entirely.
     frame: true,
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: true,            // extra isolation layer
+      sandbox: true,
       spellcheck: true,
-      devTools: DEV_MODE,       // disable devtools in production
+      devTools: DEV_MODE,
     },
     icon: getAppIcon(),
     show: false,
@@ -215,7 +208,7 @@ function apiRequest(method, reqPath, body, timeoutMs = 10000) {
       timeout: timeoutMs,
     };
 
-    const MAX_RESPONSE_BYTES = 10 * 1024 * 1024; // 10 MB hard cap
+    const MAX_RESPONSE_BYTES = 10 * 1024 * 1024;
 
     const lib = cfg.useHttps ? https : http;
     const req = lib.request(options, (res) => {
@@ -280,8 +273,8 @@ function streamChat(message, onChunk, onDone, onError) {
     timeout:  90000,
   };
 
-  const MAX_STREAM_BYTES  = 8 * 1024 * 1024; // 8 MB total stream cap
-  const MAX_CHUNK_BYTES   = 64 * 1024;         // 64 KB per SSE chunk
+  const MAX_STREAM_BYTES  = 8 * 1024 * 1024;
+  const MAX_CHUNK_BYTES   = 64 * 1024;
 
   const lib = cfg.useHttps ? https : http;
   const req = lib.request(options, (res) => {
@@ -301,7 +294,6 @@ function streamChat(message, onChunk, onDone, onError) {
       }
 
       buffer += chunk.toString();
-      // Prevent unbounded buffer growth from a malicious/buggy server with no newlines
       if (buffer.length > MAX_CHUNK_BYTES * 2) {
         streamAborted = true;
         req.destroy();
@@ -310,7 +302,7 @@ function streamChat(message, onChunk, onDone, onError) {
       }
 
       const lines = buffer.split('\n');
-      buffer = lines.pop(); // keep partial last line
+      buffer = lines.pop();
 
       for (const line of lines) {
         if (!line.startsWith('data: ')) continue;
@@ -362,17 +354,41 @@ async function checkConnection() {
   }
 }
 
+// Exponential backoff: 4s → 8s → 16s → 32s → 60s (cap)
+const PING_BASE_MS  = 4_000;
+const PING_MAX_MS   = 60_000;
+let   _pingBackoff  = PING_BASE_MS;
+let   _pingTimeout  = null;
+
+function schedulePing() {
+  if (_pingTimeout) return;
+  _pingTimeout = setTimeout(async () => {
+    _pingTimeout = null;
+    const ok = await checkConnection();
+    if (ok) {
+      _pingBackoff = PING_BASE_MS;  // reset on success
+    } else {
+      _pingBackoff = Math.min(_pingBackoff * 2, PING_MAX_MS);
+    }
+    schedulePing();
+  }, _pingBackoff);
+}
+
 function startPing() {
-  if (pingInterval) clearInterval(pingInterval);
+  stopPing();
+  _pingBackoff = PING_BASE_MS;
   connectionStatus = 'connecting';
   updateTrayMenu();
   mainWindow?.webContents.send('connection-status', { status: 'connecting' });
-  checkConnection();
-  pingInterval = setInterval(checkConnection, 8000);
+  checkConnection().then(ok => {
+    if (!ok) _pingBackoff = Math.min(_pingBackoff * 2, PING_MAX_MS);
+    schedulePing();
+  });
 }
 
 function stopPing() {
   if (pingInterval) { clearInterval(pingInterval); pingInterval = null; }
+  if (_pingTimeout) { clearTimeout(_pingTimeout); _pingTimeout = null; }
 }
 
 // ─── Notifications ─────────────────────────────────────────────────────────────
@@ -388,9 +404,54 @@ function showNotification(title, body, cooldownKey) {
   }
 }
 
+// ─── Chat History Persistence ─────────────────────────────────────────────────
+const MAX_PERSISTED_MESSAGES = 200;
+
+ipcMain.handle('chat-history-load', (event) => {
+  if (!mainWindow || event.sender !== mainWindow.webContents) return [];
+  const history = store.get('chatHistory', []);
+  return Array.isArray(history) ? history.slice(-MAX_PERSISTED_MESSAGES) : [];
+});
+
+ipcMain.handle('chat-history-save', (event, messages) => {
+  if (!mainWindow || event.sender !== mainWindow.webContents) return;
+  if (!Array.isArray(messages)) return;
+  // Sanitize: only allow known fields, cap content length
+  const safe = messages.slice(-MAX_PERSISTED_MESSAGES).map(m => ({
+    role: typeof m.role === 'string' ? m.role.slice(0, 20) : 'user',
+    content: typeof m.content === 'string' ? m.content.slice(0, 32_000) : '',
+    timestamp: typeof m.timestamp === 'number' ? m.timestamp : Date.now(),
+  }));
+  store.set('chatHistory', safe);
+});
+
+ipcMain.handle('chat-history-clear', (event) => {
+  if (!mainWindow || event.sender !== mainWindow.webContents) return;
+  store.delete('chatHistory');
+});
+
+// ─── Gateway Stats ─────────────────────────────────────────────────────────────
+ipcMain.handle('api-stats', async (event) => {
+  if (!mainWindow || event.sender !== mainWindow.webContents) return { ok: false, error: 'unauthorized' };
+  try {
+    // Try common stats/metrics endpoints
+    const endpoints = ['/api/stats', '/api/metrics', '/metrics', '/api/info'];
+    for (const ep of endpoints) {
+      try {
+        const res = await apiRequest('GET', ep, null, 5000);
+        if (res.status >= 200 && res.status < 300) {
+          return { ok: true, data: res.body, endpoint: ep };
+        }
+      } catch { /* try next */ }
+    }
+    return { ok: false, error: 'No stats endpoint available' };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
 // ─── IPC Handlers ──────────────────────────────────────────────────────────────
 
-// Config read
 ipcMain.handle('get-config', () => {
   return store.get('config', {
     host: '127.0.0.1', port: 3000, token: '', useHttps: false,
@@ -399,7 +460,6 @@ ipcMain.handle('get-config', () => {
   });
 });
 
-// Config save — validate before persisting
 ipcMain.handle('save-config', (event, config) => {
   if (!config || typeof config !== 'object') return { ok: false, error: 'Invalid config' };
   const errors = validateConnectionConfig(config);
@@ -417,7 +477,6 @@ ipcMain.handle('save-config', (event, config) => {
   return { ok: true };
 });
 
-// API proxies
 ipcMain.handle('api-status', async () => {
   try {
     const res = await apiRequest('GET', '/api/status');
@@ -438,9 +497,8 @@ ipcMain.handle('api-jobs', async () => {
 
 ipcMain.handle('api-memory-search', async (event, query) => {
   if (typeof query !== 'string') return { ok: false, error: 'Invalid query' };
-  // Rate limit: max 5 memory searches per 10 seconds
   if (!rateLimit('memory-search', 5, 10_000)) return { ok: false, error: 'Too many requests — slow down' };
-  const safeQuery = query.slice(0, 500).replace(/[\r\n]/g, ' '); // strip newlines from query string
+  const safeQuery = query.slice(0, 500).replace(/[\r\n]/g, ' ');
   try {
     const res = await apiRequest('GET', `/api/memory?q=${encodeURIComponent(safeQuery)}`);
     return { ok: res.status >= 200 && res.status < 300, data: res.body };
@@ -450,26 +508,23 @@ ipcMain.handle('api-memory-search', async (event, query) => {
 });
 
 // Streaming chat
-const STREAM_ID_RE = /^stream_\d+$/; // only allow internally generated stream IDs
+const STREAM_ID_RE = /^stream_\d+$/;
 ipcMain.on('chat-stream-start', (event, payload) => {
-  // Verify the sender is our own renderer (not a rogue renderer/webview)
   if (!mainWindow || event.sender !== mainWindow.webContents) return;
 
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return;
   const { streamId } = payload;
   let { message } = payload;
 
-  // Validate + sanitise in main process (don't trust renderer)
   if (typeof message !== 'string' || !message.trim()) return;
   if (typeof streamId !== 'string' || !STREAM_ID_RE.test(streamId)) return;
 
-  // Rate limit: max 1 stream per second (prevents spam)
   if (!rateLimit('chat-stream', 1, 1_000)) {
     event.sender.send('chat-stream-error', { streamId, error: 'Sending too fast — please wait a moment' });
     return;
   }
 
-  message = message.slice(0, 32_000); // hard cap
+  message = message.slice(0, 32_000);
 
   streamChat(
     message,
@@ -479,7 +534,6 @@ ipcMain.on('chat-stream-start', (event, payload) => {
   );
 });
 
-// Open web gateway — FIX: never include token in URL (browser history leaks)
 ipcMain.handle('open-web-gateway', () => {
   const cfg = getConnectionConfig();
   const proto = cfg.useHttps ? 'https' : 'http';
@@ -487,14 +541,12 @@ ipcMain.handle('open-web-gateway', () => {
   if (isSafeExternalUrl(url)) shell.openExternal(url);
 });
 
-// Open external URL — FIX: only allow http/https
 ipcMain.handle('open-external', (event, url) => {
   if (typeof url === 'string' && isSafeExternalUrl(url)) {
     shell.openExternal(url);
   }
 });
 
-// Connection management
 ipcMain.handle('get-connection-status', (event) => {
   if (!mainWindow || event.sender !== mainWindow.webContents) return 'disconnected';
   return connectionStatus;
@@ -514,9 +566,13 @@ ipcMain.handle('set-connection', (event, cfg) => {
   return { ok: true };
 });
 
+// ─── App version ────────────────────────────────────────────────────────────────
+ipcMain.handle('get-app-version', () => {
+  return app.getVersion();
+});
+
 // ─── App lifecycle ─────────────────────────────────────────────────────────────
 app.whenReady().then(() => {
-  // Recommended for Windows toast notifications
   if (process.platform === 'win32') app.setAppUserModelId('com.ironclaw.companion');
 
   createMainWindow();

@@ -1,6 +1,6 @@
 {
   "name": "ironclaw-companion",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "IronClaw Agent Desktop Companion",
   "main": "src/main.js",
   "scripts": {
@@ -64,5 +64,8 @@
       "perMachine": false,
       "allowToChangeInstallationDirectory": true
     }
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.9"
   }
 }
