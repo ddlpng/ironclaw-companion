@@ -23,6 +23,14 @@ const MAX_MESSAGES = 200; // cap chat history to prevent unbounded memory growth
 let messages = []; // chat history
 let jobsRefreshTimer = null;
 
+// ─── Session state ─────────────────────────────────────────────────────
+let currentSessionId = 'default';
+let sessions = [{ id: 'default', name: 'Default', createdAt: Date.now() }];
+
+// ─── Agent profile state ──────────────────────────────────────────────
+let agentProfiles = [];
+let activeProfileId = 'default';
+
 // ─── Init ─────────────────────────────────────────────────────────────────
 let _initialized = false;
 
@@ -33,6 +41,8 @@ async function init() {
   config = await api.getConfig() || config;
   applyTheme(config.theme);
   applyFontSize(config.fontSize);
+  setupSessionSelector();  // multi-session management
+  await loadAgentProfiles(); // multi-agent profiles
   setupSettingsForm();
   setupNavigation();
   setupChat();       // registers IPC listeners via preload (deduped there)
@@ -42,12 +52,13 @@ async function init() {
   setupConnectionListener();
   await loadPersistedChatHistory();  // load saved messages from disk
   checkInitialStatus();
+  checkForUpdates();  // auto-update checker
 }
 
 // Load persisted chat history from store
 async function loadPersistedChatHistory() {
   try {
-    const saved = await api.chatHistoryLoad();
+    const saved = await api.chatHistoryLoad(currentSessionId);
     if (Array.isArray(saved)) {
       messages = saved;
       // Render saved messages to UI
@@ -75,12 +86,260 @@ async function loadPersistedChatHistory() {
   }
 }
 
+// ─── Session Selector (NEW) ─────────────────────────────────────────
+async function loadSessions() {
+  try {
+    sessions = await api.getSessions();
+    if (!Array.isArray(sessions) || !sessions.length) {
+      sessions = [{ id: 'default', name: 'Default', createdAt: Date.now() }];
+    }
+  } catch (e) {
+    sessions = [{ id: 'default', name: 'Default', createdAt: Date.now() }];
+  }
+}
+
+async function switchSession(sessionId) {
+  // Save current session first
+  persistChatHistory();
+  
+  currentSessionId = sessionId;
+  
+  // Clear and reload
+  const area = document.getElementById('messagesArea');
+  area.innerHTML = '';
+  messages = [];
+  
+  await loadPersistedChatHistory();
+  updateSessionSelectorUI();
+}
+
+async function createNewSession() {
+  const name = 'Chat ' + (sessions.length + 1);
+  const newSession = await api.createSession(name);
+  if (newSession) {
+    sessions.push(newSession);
+    await switchSession(newSession.id);
+  }
+}
+
+async function deleteCurrentSession() {
+  if (currentSessionId === 'default') return;
+  const ok = await api.deleteSession(currentSessionId);
+  if (ok) {
+    sessions = sessions.filter(s => s.id !== currentSessionId);
+    await switchSession('default');
+  }
+}
+
+function updateSessionSelectorUI() {
+  const selector = document.getElementById('sessionSelector');
+  if (!selector) return;
+  
+  const current = sessions.find(s => s.id === currentSessionId);
+  selector.textContent = current?.name || 'Chat';
+}
+
+function setupSessionSelector() {
+  // Load sessions on init
+  loadSessions().then(() => {
+    updateSessionSelectorUI();
+  });
+  
+  // New session button
+  const newBtn = document.getElementById('newSessionBtn');
+  if (newBtn) {
+    newBtn.addEventListener('click', createNewSession);
+  }
+  
+  // Session dropdown
+  const selector = document.getElementById('sessionSelector');
+  const dropdown = document.getElementById('sessionDropdown');
+  if (selector && dropdown) {
+    selector.addEventListener('click', (e) => {
+      e.stopPropagation();
+      renderSessionDropdown();
+      dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+    });
+    document.addEventListener('click', () => {
+      dropdown.style.display = 'none';
+    });
+  }
+}
+
+function renderSessionDropdown() {
+  const dropdown = document.getElementById('sessionDropdown');
+  if (!dropdown) return;
+  
+  dropdown.innerHTML = '';
+  sessions.forEach(session => {
+    const item = document.createElement('div');
+    item.className = 'session-item' + (session.id === currentSessionId ? ' active' : '');
+    item.innerHTML = `
+      <span class="session-name">${escapeHtml(session.name)}</span>
+      ${session.id !== 'default' ? '<span class="session-delete" data-id="' + session.id + '">✕</span>' : ''}
+    `;
+    item.addEventListener('click', (e) => {
+      if (e.target.classList.contains('session-delete')) {
+        e.stopPropagation();
+        currentSessionId = session.id;
+        deleteCurrentSession();
+      } else {
+        switchSession(session.id);
+      }
+      dropdown.style.display = 'none';
+    });
+    dropdown.appendChild(item);
+  });
+}
+
+// ─── Multi-Agent Profiles (NEW) ───────────────────────────────────────────
+async function loadAgentProfiles() {
+  try {
+    agentProfiles = await api.getProfiles();
+    activeProfileId = await api.getActiveProfileId();
+    if (!Array.isArray(agentProfiles) || !agentProfiles.length) {
+      agentProfiles = [{ id: 'default', name: 'Local Agent', host: '127.0.0.1', port: 3000, useHttps: false }];
+    }
+    renderAgentProfileBar();
+  } catch (e) {
+    console.error('[Profiles] Failed to load:', e);
+  }
+}
+
+function renderAgentProfileBar() {
+  const bar = document.getElementById('agentProfileBar');
+  if (!bar) return;
+  bar.innerHTML = '';
+
+  agentProfiles.forEach(profile => {
+    const btn = document.createElement('button');
+    btn.className = 'agent-profile-btn' + (profile.id === activeProfileId ? ' active' : '');
+    btn.title = `${profile.host}:${profile.port}`;
+    btn.textContent = profile.name.slice(0, 16);
+    btn.addEventListener('click', () => switchAgentProfile(profile.id));
+    bar.appendChild(btn);
+  });
+
+  // Add profile button
+  const addBtn = document.createElement('button');
+  addBtn.className = 'agent-profile-add-btn';
+  addBtn.title = 'Add Agent';
+  addBtn.textContent = '+';
+  addBtn.addEventListener('click', () => showAddProfileModal());
+  bar.appendChild(addBtn);
+}
+
+async function switchAgentProfile(id) {
+  const ok = await api.activateProfile(id);
+  if (ok) {
+    activeProfileId = id;
+    renderAgentProfileBar();
+    // Reload config to reflect new host/port
+    config = await api.getConfig() || config;
+    document.getElementById('cfgHost').value = config.host || '127.0.0.1';
+    document.getElementById('cfgPort').value = config.port || 3000;
+    showToast(`Switched to ${agentProfiles.find(p => p.id === id)?.name || id}`);
+  }
+}
+
+function showAddProfileModal() {
+  const modal = document.getElementById('addProfileModal');
+  if (modal) { modal.style.display = 'flex'; return; }
+
+  // Create inline modal dynamically
+  const m = document.createElement('div');
+  m.id = 'addProfileModal';
+  m.className = 'modal-overlay';
+  m.innerHTML = `
+    <div class="modal-box">
+      <h3>Add Agent Profile</h3>
+      <label>Name<br><input id="profileName" type="text" value="New Agent" maxlength="64" /></label>
+      <label>Host<br><input id="profileHost" type="text" value="127.0.0.1" /></label>
+      <label>Port<br><input id="profilePort" type="number" value="3001" min="1" max="65535" /></label>
+      <label>Token (optional)<br><input id="profileToken" type="password" /></label>
+      <label style="flex-direction:row;gap:8px;align-items:center">
+        <input id="profileHttps" type="checkbox" /> Use HTTPS
+      </label>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button class="btn btn-primary" id="saveProfileBtn">Save</button>
+        <button class="btn btn-ghost" id="cancelProfileBtn">Cancel</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(m);
+
+  document.getElementById('saveProfileBtn').addEventListener('click', async () => {
+    const data = {
+      name:     document.getElementById('profileName').value.trim() || 'New Agent',
+      host:     document.getElementById('profileHost').value.trim(),
+      port:     parseInt(document.getElementById('profilePort').value) || 3001,
+      token:    document.getElementById('profileToken').value.trim(),
+      useHttps: document.getElementById('profileHttps').checked,
+    };
+    const res = await api.saveProfile(data);
+    if (res.ok) {
+      agentProfiles.push(res.profile);
+      renderAgentProfileBar();
+      m.remove();
+      showToast('Agent profile added');
+    } else {
+      showToast('Error: ' + (res.error || res.errors?.join(', ') || 'Failed'));
+    }
+  });
+  document.getElementById('cancelProfileBtn').addEventListener('click', () => m.remove());
+  m.addEventListener('click', (e) => { if (e.target === m) m.remove(); });
+}
+
+// Simple toast notification
+function showToast(msg) {
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.textContent = msg.slice(0, 120);
+  document.body.appendChild(toast);
+  setTimeout(() => toast.classList.add('show'), 10);
+  setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 2500);
+}
+
+// ─── Auto-update checker (NEW) ──────────────────────────────
+async function checkForUpdates() {
+  try {
+    const info = await api.getUpdateInfo();
+    if (info && info.available) {
+      showUpdateBanner(info.version, info.url);
+    }
+    
+    // Also listen for real-time update notifications
+    api.onUpdateAvailable(({ version, url }) => {
+      showUpdateBanner(version, url);
+    });
+  } catch (e) {
+    console.error('[Update] Check failed:', e);
+  }
+}
+
+function showUpdateBanner(version, url) {
+  const banner = document.getElementById('updateBanner');
+  if (!banner) return;
+  
+  banner.innerHTML = `
+    <span>🔔 IronClaw Companion v${version} available!</span>
+    <a href="#" class="update-link" data-url="${escapeHtml(url)}">Download</a>
+  `;
+  banner.style.display = 'flex';
+  
+  banner.querySelector('.update-link')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    const url = e.target.dataset.url;
+    if (url) api.openExternal(url);
+  });
+}
+
 // Persist chat history to store (debounced)
 let _saveHistoryTimer = null;
 function persistChatHistory() {
   clearTimeout(_saveHistoryTimer);
   _saveHistoryTimer = setTimeout(() => {
-    api.chatHistorySave(messages).catch(e => console.error('[Chat] Failed to save history:', e));
+    api.chatHistorySave(messages, currentSessionId).catch(e => console.error('[Chat] Failed to save history:', e));
   }, 500);  // 500ms debounce
 }
 
@@ -420,6 +679,8 @@ function switchTab(tabName) {
 // ─── Export chat ───────────────────────────────────────────────────────────
 function exportChat() {
   if (!messages.length) return;
+  const session = sessions.find(s => s.id === currentSessionId);
+  const sessionName = session?.name || 'Chat';
   const lines = messages.map(m => {
     const time = m.timestamp ? new Date(m.timestamp).toLocaleString() : '';
     const role = m.role === 'user' ? 'You' : 'IronClaw';
@@ -427,12 +688,12 @@ function exportChat() {
     const content = typeof m.content === 'string' ? m.content : '';
     return `**${role}** ${time ? `(${time})` : ''}\n\n${content}\n`;
   });
-  const md = `# IronClaw Chat Export\n_Exported: ${new Date().toLocaleString()}_\n\n---\n\n` + lines.join('\n---\n\n');
+  const md = `# IronClaw Chat Export: ${sessionName}\n_Exported: ${new Date().toLocaleString()}_\n\n---\n\n` + lines.join('\n---\n\n');
   const blob = new Blob([md], { type: 'text/markdown' });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
   a.href     = url;
-  a.download = `ironclaw-chat-${new Date().toISOString().slice(0, 10)}.md`;
+  a.download = `ironclaw-${sessionName.toLowerCase().replace(/\s+/g, '-')}-${new Date().toISOString().slice(0, 10)}.md`;
   // Append to DOM briefly to trigger download, then remove
   document.body.appendChild(a);
   a.click();
@@ -454,7 +715,7 @@ function doClearChat() {
   const area = document.getElementById('messagesArea');
   area.innerHTML = '';
   area.appendChild(buildWelcomeScreen());
-  api.chatHistoryClear();
+  api.chatHistoryClear(currentSessionId);
   updateTokenCounter();
   hideClearModal();
 }
@@ -793,6 +1054,17 @@ function formatMessage(text) {
   // Step 5: Restore code placeholders (already escaped)
   text = text.replace(/\x00CODE(\d+)\x00/g, (_, i) => codeBlocks[parseInt(i, 10)] || '');
   text = text.replace(/\x00INLINE(\d+)\x00/g, (_, i) => inlineCodes[parseInt(i, 10)] || '');
+
+  // Step 6: Inline image rendering — detect image URLs and render <img>
+  // Only render https:// image URLs to prevent local file access
+  text = text.replace(
+    /https:\/\/[^\s<>"']{5,500}\.(png|jpg|jpeg|gif|webp|svg)(\?[^\s<>"']{0,200})?/gi,
+    (match) => {
+      const safeUrl = match.replace(/'/g, '%27').replace(/"/g, '%22');
+      // Wrap in anchor so user can open in browser; img renders inline
+      return `<span class="inline-img-wrap"><img class="inline-img" src="${safeUrl}" alt="image" loading="lazy" onerror="this.parentElement.innerHTML='<span class=img-err>[image failed to load]</span>'"/></span>`;
+    }
+  );
 
   return text;
 }

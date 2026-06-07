@@ -1,6 +1,6 @@
 'use strict';
 
-const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, shell, Notification } = require('electron');
+const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, shell, Notification, safeStorage } = require('electron');
 const path = require('path');
 const https = require('https');
 const http = require('http');
@@ -15,6 +15,213 @@ let pingInterval = null;
 let notificationCooldown = {};
 
 const DEV_MODE = process.argv.includes('--dev');
+
+// ─── Encrypted token storage (safeStorage) ───────────────────────────────
+function getEncryptedToken() {
+  const encrypted = store.get('tokenEncrypted');
+  if (!encrypted) return '';
+  try {
+    if (safeStorage.isEncryptionAvailable()) {
+      const buf = Buffer.from(encrypted, 'base64');
+      return safeStorage.decryptString(buf);
+    }
+  } catch (e) {
+    console.error('[Store] Failed to decrypt token:', e.message);
+  }
+  return '';
+}
+
+function setEncryptedToken(token) {
+  if (!token) {
+    store.delete('tokenEncrypted');
+    return;
+  }
+  try {
+    if (safeStorage.isEncryptionAvailable()) {
+      const encrypted = safeStorage.encryptString(token);
+      store.set('tokenEncrypted', encrypted.toString('base64'));
+    } else {
+      // Fallback: store plaintext if encryption not available
+      store.set('tokenEncrypted', null);
+      store.set('token', token);
+    }
+  } catch (e) {
+    console.error('[Store] Failed to encrypt token:', e.message);
+    store.set('token', token);
+  }
+}
+
+// ─── Auto-update checker (GitHub releases) ─────────────────────────
+const GITHUB_REPO = 'ddlpng/ironclaw-companion';
+let _updateCheckDone = false;
+
+async function checkForUpdates() {
+  if (_updateCheckDone) return;
+  _updateCheckDone = true;
+  
+  try {
+    const currentVersion = app.getVersion();
+    // Fetch releases from GitHub API
+    const res = await fetch('https://api.github.com/repos/' + GITHUB_REPO + '/releases/latest', {
+      headers: { 'User-Agent': 'IronClaw-Companion' }
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    const latestTag = data.tag_name?.replace(/^v/, '') || '';
+    if (!latestTag) return;
+    
+    const latest = parseInt(latestTag.replace(/\./g, ''), 10);
+    const current = parseInt(currentVersion.replace(/\./g, ''), 10);
+    if (latest > current) {
+      store.set('updateAvailable', latestTag);
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('update-available', { version: latestTag, url: data.html_url });
+      }
+    }
+  } catch (e) {
+    console.error('[Update] Check failed:', e.message);
+  }
+}
+
+// ─── Chat Sessions ──────────────────────────────────────────────
+const MAX_SESSIONS = 20;
+const MAX_SESSION_MESSAGES = 200;
+
+function getSessions() {
+  return store.get('chatSessions', [{ id: 'default', name: 'Default', createdAt: Date.now() }]);
+}
+
+function createSession(name) {
+  const sessions = getSessions();
+  if (sessions.length >= MAX_SESSIONS) return null;
+  const id = 'session_' + Date.now();
+  const session = { id, name: name || 'New Chat', createdAt: Date.now() };
+  sessions.push(session);
+  store.set('chatSessions', sessions);
+  return session;
+}
+
+function deleteSession(id) {
+  if (id === 'default') return false;
+  const sessions = getSessions().filter(s => s.id !== id);
+  store.set('chatSessions', sessions);
+  store.delete('chatHistory_' + id);
+  return true;
+}
+
+function getSessionMessages(sessionId) {
+  const key = sessionId === 'default' ? 'chatHistory' : 'chatHistory_' + sessionId;
+  const history = store.get(key, []);
+  return Array.isArray(history) ? history.slice(-MAX_SESSION_MESSAGES) : [];
+}
+
+function saveSessionMessages(sessionId, messages) {
+  const key = sessionId === 'default' ? 'chatHistory' : 'chatHistory_' + sessionId;
+  const safe = messages.slice(-MAX_SESSION_MESSAGES).map(m => ({
+    role: typeof m.role === 'string' ? m.role.slice(0, 20) : 'user',
+    content: typeof m.content === 'string' ? m.content.slice(0, 32_000) : '',
+    timestamp: typeof m.timestamp === 'number' ? m.timestamp : Date.now(),
+  }));
+  store.set(key, safe);
+}
+
+// ─── Multi-Agent Profiles ──────────────────────────────────────────────────────
+const MAX_PROFILES = 20;
+
+function getProfiles() {
+  return store.get('agentProfiles', [
+    { id: 'default', name: 'Local Agent', host: '127.0.0.1', port: 3000, token: '', useHttps: false },
+  ]);
+}
+
+function getActiveProfileId() {
+  return store.get('activeProfileId', 'default');
+}
+
+function activateProfile(id) {
+  const profiles = getProfiles();
+  const profile = profiles.find(p => p.id === id);
+  if (!profile) return false;
+  store.set('activeProfileId', id);
+  store.set('host', profile.host);
+  store.set('port', profile.port);
+  setEncryptedToken(profile.token || '');
+  store.set('useHttps', Boolean(profile.useHttps));
+  return true;
+}
+
+function upsertProfile(data) {
+  if (!data || typeof data !== 'object') return { ok: false, error: 'Invalid data' };
+  const errors = validateConnectionConfig(data);
+  if (errors.length) return { ok: false, errors };
+
+  const profiles = getProfiles();
+  const idx = profiles.findIndex(p => p.id === data.id);
+  if (idx >= 0) {
+    profiles[idx] = {
+      ...profiles[idx],
+      name: typeof data.name === 'string' ? data.name.slice(0, 64) : profiles[idx].name,
+      host: data.host,
+      port: parseInt(data.port, 10) || 3000,
+      useHttps: Boolean(data.useHttps),
+    };
+    if (data.token !== undefined) profiles[idx].token = data.token.slice(0, 2048);
+    store.set('agentProfiles', profiles);
+    return { ok: true, profile: profiles[idx] };
+  }
+  // New profile
+  if (profiles.length >= MAX_PROFILES) return { ok: false, error: 'Max profiles reached (20)' };
+  const newProfile = {
+    id: 'profile_' + Date.now(),
+    name: typeof data.name === 'string' ? data.name.slice(0, 64) : 'New Agent',
+    host: data.host,
+    port: parseInt(data.port, 10) || 3000,
+    token: typeof data.token === 'string' ? data.token.slice(0, 2048) : '',
+    useHttps: Boolean(data.useHttps),
+  };
+  profiles.push(newProfile);
+  store.set('agentProfiles', profiles);
+  return { ok: true, profile: newProfile };
+}
+
+function removeProfile(id) {
+  if (id === 'default') return false;
+  const profiles = getProfiles().filter(p => p.id !== id);
+  store.set('agentProfiles', profiles);
+  if (getActiveProfileId() === id) activateProfile('default');
+  return true;
+}
+
+// Profile IPC
+ipcMain.handle('get-profiles', (event) => {
+  if (!mainWindow || event.sender !== mainWindow.webContents) return [];
+  // Don't expose tokens to renderer
+  return getProfiles().map(({ token: _t, ...rest }) => rest);
+});
+
+ipcMain.handle('get-active-profile-id', (event) => {
+  if (!mainWindow || event.sender !== mainWindow.webContents) return 'default';
+  return getActiveProfileId();
+});
+
+ipcMain.handle('activate-profile', (event, id) => {
+  if (!mainWindow || event.sender !== mainWindow.webContents) return false;
+  if (typeof id !== 'string' || id.length > 64) return false;
+  const ok = activateProfile(id);
+  if (ok) { stopPing(); startPing(); }
+  return ok;
+});
+
+ipcMain.handle('save-profile', (event, data) => {
+  if (!mainWindow || event.sender !== mainWindow.webContents) return { ok: false };
+  return upsertProfile(data);
+});
+
+ipcMain.handle('delete-profile', (event, id) => {
+  if (!mainWindow || event.sender !== mainWindow.webContents) return false;
+  if (typeof id !== 'string') return false;
+  return removeProfile(id);
+});
 
 // ─── Rate limiter (simple token-bucket per IPC channel) ───────────────────────
 const _rateLimits = {};
@@ -179,7 +386,7 @@ function getConnectionConfig() {
   return {
     host:     store.get('host',     '127.0.0.1'),
     port:     parseInt(store.get('port', 3000), 10) || 3000,
-    token:    store.get('token',    ''),
+    token:    getEncryptedToken() || store.get('token', ''),
     useHttps: store.get('useHttps', false),
   };
 }
@@ -408,30 +615,50 @@ function showNotification(title, body, cooldownKey) {
   }
 }
 
-// ─── Chat History Persistence ─────────────────────────────────────────────────
-const MAX_PERSISTED_MESSAGES = 200;
-
-ipcMain.handle('chat-history-load', (event) => {
+// ─── Chat History Persistence (per-session) ─────────────────────────
+ipcMain.handle('chat-history-load', (event, sessionId) => {
   if (!mainWindow || event.sender !== mainWindow.webContents) return [];
-  const history = store.get('chatHistory', []);
-  return Array.isArray(history) ? history.slice(-MAX_PERSISTED_MESSAGES) : [];
+  const sid = sessionId || 'default';
+  return getSessionMessages(sid);
 });
 
-ipcMain.handle('chat-history-save', (event, messages) => {
+ipcMain.handle('chat-history-save', (event, messages, sessionId) => {
   if (!mainWindow || event.sender !== mainWindow.webContents) return;
   if (!Array.isArray(messages)) return;
-  // Sanitize: only allow known fields, cap content length
-  const safe = messages.slice(-MAX_PERSISTED_MESSAGES).map(m => ({
-    role: typeof m.role === 'string' ? m.role.slice(0, 20) : 'user',
-    content: typeof m.content === 'string' ? m.content.slice(0, 32_000) : '',
-    timestamp: typeof m.timestamp === 'number' ? m.timestamp : Date.now(),
-  }));
-  store.set('chatHistory', safe);
+  const sid = sessionId || 'default';
+  saveSessionMessages(sid, messages);
 });
 
-ipcMain.handle('chat-history-clear', (event) => {
+ipcMain.handle('chat-history-clear', (event, sessionId) => {
   if (!mainWindow || event.sender !== mainWindow.webContents) return;
-  store.delete('chatHistory');
+  const sid = sessionId || 'default';
+  if (sid === 'default') {
+    saveSessionMessages('default', []);
+  } else {
+    store.delete('chatHistory_' + sid);
+  }
+});
+
+// ─── Session Management ──────────────────────────────────────────────
+ipcMain.handle('get-sessions', (event) => {
+  if (!mainWindow || event.sender !== mainWindow.webContents) return [];
+  return getSessions();
+});
+
+ipcMain.handle('create-session', (event, name) => {
+  if (!mainWindow || event.sender !== mainWindow.webContents) return null;
+  return createSession(name);
+});
+
+ipcMain.handle('delete-session', (event, id) => {
+  if (!mainWindow || event.sender !== mainWindow.webContents) return false;
+  return deleteSession(id);
+});
+
+ipcMain.handle('get-update-info', (event) => {
+  if (!mainWindow || event.sender !== mainWindow.webContents) return { available: false };
+  const ver = store.get('updateAvailable');
+  return ver ? { available: true, version: ver } : { available: false };
 });
 
 // ─── Gateway Stats ─────────────────────────────────────────────────────────────
@@ -474,7 +701,7 @@ ipcMain.handle('save-config', (event, config) => {
   store.set('config', config);
   store.set('host',           config.host);
   store.set('port',           parseInt(config.port, 10) || 3000);
-  store.set('token',          config.token || '');
+  setEncryptedToken(config.token || '');
   store.set('useHttps',       Boolean(config.useHttps));
   store.set('minimizeToTray', Boolean(config.minimizeToTray));
   store.set('notifications',  Boolean(config.notifications));
@@ -570,7 +797,7 @@ ipcMain.handle('set-connection', (event, cfg) => {
 
   store.set('host',     cfg.host);
   store.set('port',     parseInt(cfg.port, 10) || 3000);
-  store.set('token',    cfg.token || '');
+  setEncryptedToken(cfg.token || '');
   store.set('useHttps', Boolean(cfg.useHttps));
   stopPing();
   startPing();
@@ -590,6 +817,9 @@ app.whenReady().then(() => {
   createMainWindow();
   createTray();
   startPing();
+  
+  // Auto-update checker (delayed start)
+  setTimeout(checkForUpdates, 5000);
 
   app.on('activate', () => {
     if (!mainWindow) createMainWindow();

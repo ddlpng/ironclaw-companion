@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="Content-Security-Policy"
-        content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none';" />
+        content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none';" />
   <title>IronClaw Companion</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
@@ -70,11 +70,22 @@
     <!-- Main Content -->
     <main class="main-content">
 
+      <!-- Agent Profile Bar -->
+      <div class="agent-profile-bar" id="agentProfileBar"></div>
+
       <!-- ── CHAT TAB ─────────────────────────────── -->
       <section class="tab-panel active" id="tab-chat">
         <div class="panel-header">
           <div class="panel-title">
-            <h2>Chat with IronClaw</h2>
+            <!-- Session selector -->
+            <div class="session-selector" id="sessionSelector">
+              <span class="session-current">Default</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </div>
+            <div class="session-dropdown" id="sessionDropdown" style="display:none"></div>
+            <button class="btn btn-ghost btn-sm" id="newSessionBtn" title="New Chat">+</button>
             <span class="model-badge" id="modelBadge">—</span>
           </div>
           <div class="panel-actions">
@@ -84,6 +95,8 @@
               </svg>
               Search
             </button>
+            <!-- Update banner -->
+            <div class="update-banner" id="updateBanner" style="display:none"></div>
             <button class="btn btn-ghost" id="exportChatBtn" title="Export chat">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>

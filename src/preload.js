@@ -20,6 +20,7 @@ const ALLOWED_RECEIVE = new Set([
   'chat-stream-chunk',
   'chat-stream-done',
   'chat-stream-error',
+  'update-available',
 ]);
 
 contextBridge.exposeInMainWorld('ironclawAPI', {
@@ -38,10 +39,26 @@ contextBridge.exposeInMainWorld('ironclawAPI', {
   apiMemorySearch: (query) => ipcRenderer.invoke('api-memory-search', query),
   apiStats:        ()      => ipcRenderer.invoke('api-stats'),
 
-  // Chat history persistence
-  chatHistoryLoad:  ()         => ipcRenderer.invoke('chat-history-load'),
-  chatHistorySave:  (messages) => ipcRenderer.invoke('chat-history-save', messages),
-  chatHistoryClear: ()         => ipcRenderer.invoke('chat-history-clear'),
+  // Chat history persistence (per-session)
+  chatHistoryLoad:  (sessionId) => ipcRenderer.invoke('chat-history-load', sessionId),
+  chatHistorySave:  (messages, sessionId) => ipcRenderer.invoke('chat-history-save', messages, sessionId),
+  chatHistoryClear: (sessionId) => ipcRenderer.invoke('chat-history-clear', sessionId),
+
+  // Session management
+  getSessions:      ()    => ipcRenderer.invoke('get-sessions'),
+  createSession:   (name) => ipcRenderer.invoke('create-session', name),
+  deleteSession:   (id)   => ipcRenderer.invoke('delete-session', id),
+
+  // Multi-agent profiles
+  getProfiles:        ()       => ipcRenderer.invoke('get-profiles'),
+  getActiveProfileId: ()       => ipcRenderer.invoke('get-active-profile-id'),
+  activateProfile:    (id)     => ipcRenderer.invoke('activate-profile', id),
+  saveProfile:        (data)   => ipcRenderer.invoke('save-profile', data),
+  deleteProfile:      (id)     => ipcRenderer.invoke('delete-profile', id),
+
+  // Update checker
+  getUpdateInfo:   ()    => ipcRenderer.invoke('get-update-info'),
+  onUpdateAvailable: (cb)  => _on('update-available', cb),
 
   // App info
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
@@ -55,6 +72,8 @@ contextBridge.exposeInMainWorld('ironclawAPI', {
   onChatStreamChunk: (cb) => _on('chat-stream-chunk', cb),
   onChatStreamDone:  (cb) => _on('chat-stream-done',  cb),
   onChatStreamError: (cb) => _on('chat-stream-error', cb),
+
+  onUpdateAvailable: (cb) => _on('update-available', cb),
 
   // Utilities
   openWebGateway: ()    => ipcRenderer.invoke('open-web-gateway'),
