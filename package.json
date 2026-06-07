@@ -44,12 +44,15 @@
       ]
     },
     "win": {
-      "icon": "assets/icon.ico",
       "target": [
-        "nsis",
-        "portable"
+        {
+          "target": "dir",
+          "arch": [
+            "x64"
+          ]
+        }
       ],
-      "signAndEditExecutable": false
+      "rcedit": false
     },
     "linux": {
       "icon": "assets/icon.png",

@@ -1,6 +1,8 @@
 /* ─── IronClaw Companion — Renderer ──────────────────────────────────── */
 'use strict';
 
+// Highlight.js is loaded via index.html (local bundle)
+
 const api = window.ironclawAPI;
 
 // ─── State ────────────────────────────────────────────────────────────────
@@ -31,6 +33,9 @@ let sessions = [{ id: 'default', name: 'Default', createdAt: Date.now() }];
 let agentProfiles = [];
 let activeProfileId = 'default';
 
+// ─── Pinned messages state ────────────────────────────────────────────────
+let pinnedMessages = []; // [{ id, role, content, timestamp }]
+
 // ─── Init ─────────────────────────────────────────────────────────────────
 let _initialized = false;
 
@@ -43,6 +48,7 @@ async function init() {
   applyFontSize(config.fontSize);
   setupSessionSelector();  // multi-session management
   await loadAgentProfiles(); // multi-agent profiles
+  loadPinnedMessages();      // pinned messages
   setupSettingsForm();
   setupNavigation();
   setupChat();       // registers IPC listeners via preload (deduped there)
@@ -190,6 +196,140 @@ function renderSessionDropdown() {
     });
     dropdown.appendChild(item);
   });
+}
+
+// ─── Pinned messages ───────────────────────────────────────────────────────────────────
+const MAX_PINS = 20;
+
+function loadPinnedMessages() {
+  try {
+    const raw = localStorage.getItem('ironclaw-pins');
+    pinnedMessages = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(pinnedMessages)) pinnedMessages = [];
+  } catch (_) { pinnedMessages = []; }
+}
+
+function savePinnedMessages() {
+  try {
+    localStorage.setItem('ironclaw-pins', JSON.stringify(pinnedMessages.slice(0, MAX_PINS)));
+  } catch (_) {}
+}
+
+function pinMessage(id, role, content, timestamp) {
+  if (pinnedMessages.find(p => p.id === id)) {
+    // already pinned — unpin
+    pinnedMessages = pinnedMessages.filter(p => p.id !== id);
+    savePinnedMessages();
+    showToast('Unpinned');
+    renderPinsPanel();
+    return;
+  }
+  if (pinnedMessages.length >= MAX_PINS) {
+    showToast('Max 20 pins reached');
+    return;
+  }
+  pinnedMessages.push({ id, role, content: content.slice(0, 2000), timestamp });
+  savePinnedMessages();
+  showToast('📌 Pinned!');
+  renderPinsPanel();
+}
+
+function setupPinsPanel() {
+  // Create the panel if it doesn't exist
+  if (document.getElementById('pinsPanel')) return;
+  const panel = document.createElement('div');
+  panel.id = 'pinsPanel';
+  panel.className = 'pins-panel hidden';
+  panel.innerHTML = `
+    <div class="pins-header">
+      <span>📌 Pinned Messages</span>
+      <button class="btn-icon" id="closePinsBtn">✕</button>
+    </div>
+    <div class="pins-list" id="pinsList"></div>
+  `;
+  document.querySelector('.main-content').appendChild(panel);
+  document.getElementById('closePinsBtn').addEventListener('click', hidePinsPanel);
+}
+
+function showPinsPanel() {
+  const panel = document.getElementById('pinsPanel');
+  if (panel) { panel.classList.remove('hidden'); renderPinsPanel(); }
+}
+
+function hidePinsPanel() {
+  const panel = document.getElementById('pinsPanel');
+  if (panel) panel.classList.add('hidden');
+}
+
+function renderPinsPanel() {
+  const list = document.getElementById('pinsList');
+  if (!list) return;
+  if (!pinnedMessages.length) {
+    list.innerHTML = '<div class="empty-state"><p>No pinned messages yet.<br>Right-click a message to pin it.</p></div>';
+    return;
+  }
+  list.innerHTML = '';
+  pinnedMessages.forEach(pin => {
+    const item = document.createElement('div');
+    item.className = 'pin-item';
+    const time = pin.timestamp ? new Date(pin.timestamp).toLocaleString() : '';
+    item.innerHTML = `
+      <div class="pin-meta">${escapeHtml(pin.role === 'user' ? 'You' : 'IronClaw')} ${time ? '· ' + escapeHtml(time) : ''}</div>
+      <div class="pin-content">${escapeHtml(pin.content.slice(0, 300))}${pin.content.length > 300 ? '…' : ''}</div>
+      <button class="pin-remove-btn" data-id="${escapeHtml(pin.id)}">Unpin</button>
+    `;
+    item.querySelector('.pin-remove-btn').addEventListener('click', () => {
+      pinnedMessages = pinnedMessages.filter(p => p.id !== pin.id);
+      savePinnedMessages();
+      renderPinsPanel();
+    });
+    list.appendChild(item);
+  });
+}
+
+// ─── Keyboard shortcuts ────────────────────────────────────────────────────────────────
+function setupKeyboardShortcuts() {
+  document.addEventListener('keydown', (e) => {
+    const ctrl = e.ctrlKey || e.metaKey;
+    if (!ctrl) return;
+
+    // Tab switching: Ctrl+1..5
+    if (e.key >= '1' && e.key <= '5') {
+      const tabs = ['chat','jobs','memory','status','settings'];
+      const tab = tabs[parseInt(e.key) - 1];
+      if (tab) { e.preventDefault(); switchTab(tab); }
+      return;
+    }
+
+    // Ctrl+P — Pinned messages panel
+    if (e.key === 'p' || e.key === 'P') {
+      const panel = document.getElementById('pinsPanel');
+      if (panel) {
+        e.preventDefault();
+        panel.classList.contains('hidden') ? showPinsPanel() : hidePinsPanel();
+      }
+    }
+
+    // Ctrl+N — New session
+    if (e.key === 'n' || e.key === 'N') {
+      e.preventDefault();
+      const btn = document.getElementById('newSessionBtn');
+      if (btn) btn.click();
+    }
+
+    // Ctrl+E — Export chat
+    if (e.key === 'e' || e.key === 'E') {
+      e.preventDefault();
+      exportChat();
+    }
+  });
+
+  // Also add /pins shortcut to PALETTE_COMMANDS
+  const pc = PALETTE_COMMANDS;
+  if (pc && !pc.find(c => c.label === 'Pinned Messages')) {
+    pc.push({ icon: '📌', label: 'Pinned Messages', kbd: 'Ctrl+P', action: () => { closePalette(); showPinsPanel(); } });
+    pc.push({ icon: '📋', label: 'New Session', kbd: 'Ctrl+N', action: () => { closePalette(); document.getElementById('newSessionBtn')?.click(); } });
+  }
 }
 
 // ─── Multi-Agent Profiles (NEW) ───────────────────────────────────────────
@@ -795,12 +935,153 @@ function setupChat() {
   setupTemplates();
   setupChatSearch();
   setupPalette();
+  setupSlashAutocomplete();
+  setupPinsPanel();
+  setupKeyboardShortcuts();
+}
+
+// ─── Slash commands ──────────────────────────────────────────────────────
+const SLASH_COMMANDS = [
+  { cmd: '/help',    desc: 'Show available commands' },
+  { cmd: '/clear',   desc: 'Clear chat history' },
+  { cmd: '/export',  desc: 'Export chat to Markdown' },
+  { cmd: '/pins',    desc: 'Show pinned messages' },
+  { cmd: '/session', desc: 'List chat sessions' },
+  { cmd: '/agent',   desc: 'List agent profiles' },
+  { cmd: '/status',  desc: 'Show connection status' },
+];
+
+function handleSlashCommand(text) {
+  const lower = text.toLowerCase().trim();
+  if (lower === '/help') {
+    const helpText = SLASH_COMMANDS.map(c => `\`${c.cmd}\` — ${c.desc}`).join('\n');
+    appendSystemMessage('**Available commands:**\n' + helpText);
+    return true;
+  }
+  if (lower === '/clear') {
+    showClearModal();
+    return true;
+  }
+  if (lower === '/export') {
+    exportChat();
+    showToast('Chat exported');
+    return true;
+  }
+  if (lower === '/pins') {
+    showPinsPanel();
+    return true;
+  }
+  if (lower === '/session') {
+    const list = sessions.map((s, i) => `${s.id === currentSessionId ? '▶️' : '▫️'} **${s.name}**`).join('\n');
+    appendSystemMessage('**Sessions:**\n' + list);
+    return true;
+  }
+  if (lower === '/agent') {
+    const list = agentProfiles.map(p => `${p.id === activeProfileId ? '▶️' : '▫️'} **${p.name}** (${p.host}:${p.port})`).join('\n');
+    appendSystemMessage('**Agent Profiles:**\n' + (list || 'No profiles'));
+    return true;
+  }
+  if (lower === '/status') {
+    const tab = document.querySelector('.nav-btn[data-tab="status"]');
+    if (tab) tab.click();
+    return true;
+  }
+  return false; // not a slash command
+}
+
+function appendSystemMessage(text) {
+  const area = document.getElementById('messagesArea');
+  const el = document.createElement('div');
+  el.className = 'message system';
+  const bubble = document.createElement('div');
+  bubble.className = 'msg-bubble system-bubble';
+  bubble.innerHTML = formatMessage(text);
+  el.appendChild(bubble);
+  area.appendChild(el);
+  area.scrollTop = area.scrollHeight;
+}
+
+// Setup slash command autocomplete in input
+function setupSlashAutocomplete() {
+  const input = document.getElementById('messageInput');
+  let acMenu = null;
+
+  function closeAc() {
+    if (acMenu) { acMenu.remove(); acMenu = null; }
+  }
+
+  input.addEventListener('input', () => {
+    const val = input.value;
+    if (!val.startsWith('/')) { closeAc(); return; }
+    const query = val.toLowerCase();
+    const matches = SLASH_COMMANDS.filter(c => c.cmd.startsWith(query));
+    if (!matches.length) { closeAc(); return; }
+
+    closeAc();
+    acMenu = document.createElement('div');
+    acMenu.className = 'slash-ac-menu';
+    matches.forEach(c => {
+      const item = document.createElement('div');
+      item.className = 'slash-ac-item';
+      item.innerHTML = `<span class="slash-ac-cmd">${escapeHtml(c.cmd)}</span><span class="slash-ac-desc">${escapeHtml(c.desc)}</span>`;
+      item.addEventListener('click', () => {
+        input.value = c.cmd;
+        input.dispatchEvent(new Event('input'));
+        closeAc();
+        input.focus();
+      });
+      acMenu.appendChild(item);
+    });
+
+    const inputRect = input.getBoundingClientRect();
+    acMenu.style.bottom = (window.innerHeight - inputRect.top + 4) + 'px';
+    acMenu.style.left = inputRect.left + 'px';
+    acMenu.style.width = inputRect.width + 'px';
+    document.body.appendChild(acMenu);
+  });
+
+  input.addEventListener('keydown', (e) => {
+    if (!acMenu) return;
+    const items = acMenu.querySelectorAll('.slash-ac-item');
+    const selected = acMenu.querySelector('.slash-ac-item.selected');
+    const idx = Array.from(items).indexOf(selected);
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      const next = items[Math.min(idx + 1, items.length - 1)];
+      items.forEach(i => i.classList.remove('selected'));
+      if (next) next.classList.add('selected');
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      const prev = items[Math.max(idx - 1, 0)];
+      items.forEach(i => i.classList.remove('selected'));
+      if (prev) prev.classList.add('selected');
+    } else if (e.key === 'Tab' || e.key === 'Enter') {
+      const sel = acMenu.querySelector('.slash-ac-item.selected') || items[0];
+      if (sel) { sel.click(); e.preventDefault(); }
+    } else if (e.key === 'Escape') {
+      closeAc();
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (acMenu && !acMenu.contains(e.target) && e.target !== input) closeAc();
+  });
 }
 
 function sendMessage() {
   const input = document.getElementById('messageInput');
   const text = input.value.trim();
   if (!text || isStreaming) return;
+
+  // Handle slash commands locally
+  if (text.startsWith('/')) {
+    const handled = handleSlashCommand(text);
+    if (handled) {
+      input.value = '';
+      input.style.height = 'auto';
+      return;
+    }
+  }
 
   // Hide welcome screen
   const welcome = document.getElementById('welcomeScreen');
@@ -838,7 +1119,9 @@ function appendMessage(role, content) {
 
 function buildMessageEl(role, content, timestamp) {
   const msg = document.createElement('div');
+  const msgId = `msg_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
   msg.className = `message ${role}`;
+  msg.dataset.msgId = msgId;
 
   const avatar = document.createElement('div');
   avatar.className = 'msg-avatar';
@@ -850,6 +1133,11 @@ function buildMessageEl(role, content, timestamp) {
   const bubble = document.createElement('div');
   bubble.className = 'msg-bubble';
   bubble.innerHTML = formatMessage(content);
+
+  // Apply syntax highlighting to code blocks
+  if (window.hljs) {
+    bubble.querySelectorAll('pre code').forEach(el => window.hljs.highlightElement(el));
+  }
 
   // Copy button
   const copyBtn = document.createElement('button');
@@ -868,12 +1156,29 @@ function buildMessageEl(role, content, timestamp) {
     }).catch(() => {});
   });
 
+  // Pin button
+  const isPinned = pinnedMessages.some(p => p.id === msgId);
+  const pinBtn = document.createElement('button');
+  pinBtn.className = 'pin-msg-btn' + (isPinned ? ' pinned' : '');
+  pinBtn.title = isPinned ? 'Unpin message' : 'Pin message';
+  pinBtn.textContent = isPinned ? '📌' : '📍';
+  pinBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const ts2 = timestamp || Date.now();
+    pinMessage(msgId, role, content, ts2);
+    const nowPinned = pinnedMessages.some(p => p.id === msgId);
+    pinBtn.textContent = nowPinned ? '📌' : '📍';
+    pinBtn.classList.toggle('pinned', nowPinned);
+    pinBtn.title = nowPinned ? 'Unpin message' : 'Pin message';
+  });
+
   const time = document.createElement('div');
   time.className = 'msg-time';
   const ts = timestamp ? new Date(timestamp) : new Date();
   time.textContent = ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
   contentDiv.appendChild(copyBtn);
+  contentDiv.appendChild(pinBtn);
   contentDiv.appendChild(bubble);
   contentDiv.appendChild(time);
   msg.appendChild(avatar);
@@ -937,7 +1242,13 @@ function finalizeStream(streamId, error) {
     }
   } else {
     const content = streamCounters[streamId] || '';
-    if (bubble) bubble.innerHTML = formatMessage(content);
+    if (bubble) {
+      bubble.innerHTML = formatMessage(content);
+      // Apply syntax highlighting to code blocks
+      if (window.hljs) {
+        bubble.querySelectorAll('pre code').forEach(el => window.hljs.highlightElement(el));
+      }
+    }
     messages.push({ role: 'agent', content, timestamp: Date.now() });
     persistChatHistory();
     updateTokenCounter();

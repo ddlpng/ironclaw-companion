@@ -1,276 +1,210 @@
-<div align="center">
+# ⚔ IronClaw Companion
 
-<img src="assets/icon.svg" width="72" alt="IronClaw Companion Logo" />
+> **Desktop interface for [IronClaw](https://github.com/nearai/ironclaw) AI Agent** — secure, local-first, zero cloud dependency.
 
-# IronClaw Companion
-
-**A secure, privacy-first desktop companion for IronClaw AI Agent**
-
-Built with Electron · Runs locally · Zero cloud dependency
-
-[![Version](https://img.shields.io/badge/version-1.2.1-e05252?style=flat-square)](https://github.com/ddlpng/ironclaw-companion/releases/latest)
-[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-555?style=flat-square)](#-download)
-[![License](https://img.shields.io/badge/license-MIT-555?style=flat-square)](LICENSE)
-[![Security](https://img.shields.io/badge/npm%20audit-0%20vulns-3fb950?style=flat-square)](SECURITY.md)
-[![Contributing](https://img.shields.io/badge/contributions-welcome-58a6ff?style=flat-square)](CONTRIBUTING.md)
-
-</div>
-
----
-
-## 📸 Screenshots
-
-<div align="center">
-
-**Chat — streaming responses, copy button, token counter**
-![Chat](assets/screenshot-chat.png)
-
-**Ctrl+K Command Palette — navigate anything from the keyboard**
-![Command Palette](assets/screenshot-palette.png)
-
-**Ctrl+F Chat Search — highlight matches, navigate with ↑↓**
-![Chat Search](assets/screenshot-search.png)
-
-**Jobs Dashboard — live progress bars, status badges**
-![Jobs](assets/screenshot-jobs.png)
-
-**Settings — full gateway config, theme, chat preferences**
-![Settings](assets/screenshot-settings.png)
-
-</div>
-
----
-
-## What is this?
-
-IronClaw Companion is a native desktop app that connects to your **local IronClaw Web Gateway** and gives you a polished interface to chat with your AI agent, monitor jobs, search memory, and track connection status — all without a browser, without a cloud account, and without your data leaving your machine.
-
----
-
-## ✨ Features
-
-| | Feature | Description |
-|---|---|---|
-| 💬 | **Streaming chat** | Real-time responses via SSE — watch the agent think character by character |
-| 📤 | **Export chat** | Download any conversation as a `.md` file |
-| 📋 | **Copy button** | Hover any message bubble → copy to clipboard in one click |
-| 🔍 | **Chat search** | `Ctrl+F` → search bar with highlighted matches and ↑↓ navigation |
-| ⌨️ | **Command palette** | `Ctrl+K` → navigate tabs, export, search, refresh — fully keyboard-driven |
-| 📝 | **Prompt templates** | Quick-access template picker inside the message input |
-| 🔢 | **Token counter** | Live ~token estimate for your conversation context |
-| 🗑️ | **Clear with confirmation** | Confirmation dialog before wiping history — no more accidental clears |
-| 💾 | **Persistent history** | Chat survives restarts — up to 200 messages, saved automatically |
-| ✨ | **Markdown rendering** | Bold, `code`, lists, and fenced code blocks render properly |
-| 📊 | **Jobs dashboard** | View active and completed agent tasks at a glance |
-| 🧠 | **Memory search** | Query your agent's knowledge base directly |
-| 🔌 | **Smart reconnect** | Exponential backoff reconnect — polite to your gateway when it's down |
-| 🌙 | **Dark / Light theme** | System-native, switches cleanly |
-| 🔔 | **System tray** | Minimize to tray, desktop notifications |
-| ⚙️ | **Full settings** | Host, port, auth token, HTTPS, font size — all configurable |
+[![Release](https://img.shields.io/github/v/release/ddlpng/ironclaw-companion?style=flat-square&color=e05252)](https://github.com/ddlpng/ironclaw-companion/releases)
+[![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
+[![Electron](https://img.shields.io/badge/Electron-42-47848F?style=flat-square&logo=electron&logoColor=white)](https://www.electronjs.org/)
+[![Platform](https://img.shields.io/badge/platform-Windows-0078d7?style=flat-square&logo=windows)](https://github.com/ddlpng/ironclaw-companion/releases)
 
 ---
 
 ## 📥 Download
 
-→ **[Releases page](https://github.com/ddlpng/ironclaw-companion/releases/latest)**
+**[→ Latest Release: v1.3.0](https://github.com/ddlpng/ironclaw-companion/releases/latest)**
 
-| Platform | File | Notes |
-|---|---|---|
-| 🪟 **Windows** | `IronClaw Companion 1.2.1.exe` | Portable — no install, just double-click |
-| 🐧 **Linux** (any) | `IronClaw Companion-1.2.1.AppImage` | No install — `chmod +x` then run |
-| 🐧 **Linux** (Debian/Ubuntu) | `ironclaw-companion_1.2.1_amd64.deb` | `sudo dpkg -i` |
+| Platform | File | Note |
+|----------|------|------|
+| Windows (x64) | `ironclaw-companion-v1.3.0-win-x64.zip` | Portable, no install needed |
 
-> **Latest: v1.2.1** — Security patch (9 IPC hardening fixes). See [Changelog](#-changelog).
-> Previous: v1.2.0 — 8 new features including export, copy, search, Ctrl+K palette.
+**Extract → run `IronClaw Companion.exe`**. No installer, no admin rights required.
 
 ---
 
-## 🚀 Quick Start
+## ✨ Features
 
-### Windows — Portable
+### v1.3.0 — Latest
 
-1. Download `IronClaw Companion 1.2.0.exe`
-2. Double-click — no installation required
-3. Open **Settings** → enter your gateway host/port → **Save**
+| Feature | Description |
+|---------|-------------|
+| 🔒 **Encrypted Token** | API token stored via OS keychain (`safeStorage`) — never plaintext on disk |
+| 🔄 **Auto-Update Checker** | Checks GitHub releases on startup, shows banner + download link |
+| 💬 **Multi-Session Chat** | Up to 20 named sessions, per-session history, instant switching |
+| 🤖 **Multi-Agent Profiles** | Switch between IronClaw instances without touching Settings |
+| 🖼️ **Inline Images** | Agent-sent `https://...` image URLs render directly in chat |
+| 🎨 **Syntax Highlighting** | Code blocks get full language-aware highlighting (highlight.js) |
+| `/` **Slash Commands** | `/help`, `/clear`, `/export`, `/pins`, `/session`, `/agent`, `/status` |
+| 📌 **Pinned Messages** | Pin important messages for quick reference (Ctrl+P) |
+| ⌨️ **Keyboard Shortcuts** | Ctrl+1–5 tabs, Ctrl+K palette, Ctrl+F search, Ctrl+E export, Ctrl+N new session |
 
-### Linux — AppImage
+### v1.2.x — Security Hardening
 
-```bash
-chmod +x "IronClaw Companion-1.2.0.AppImage"
-./"IronClaw Companion-1.2.0.AppImage"
-```
+| Feature | Description |
+|---------|-------------|
+| 🛡️ **IPC Hardening** | 9 security fixes — sender verification, type guards, rate limiting |
+| 📋 **SECURITY.md** | Responsible disclosure policy, architecture notes |
+| 🔑 **Token Guard** | API token never exposed to renderer process |
 
-### Linux — .deb
+### v1.1.0 — Core
 
-```bash
-sudo dpkg -i ironclaw-companion_1.2.0_amd64.deb
-ironclaw-companion
-```
+| Feature | Description |
+|---------|-------------|
+| 💬 **Streaming Chat** | Real-time streamed responses from IronClaw agent |
+| 📊 **Jobs Monitor** | View active/completed agent jobs with live status |
+| 🧠 **Memory Search** | Semantic search across agent memory |
+| 📡 **Status Dashboard** | Model, version, uptime, raw API data |
+| 🔔 **System Tray** | Minimize to tray, desktop notifications |
+| 🎨 **Themes** | Dark / Light / Midnight / Forest |
+| 📤 **Export Chat** | Download conversation as Markdown |
+| 🔍 **Chat Search** | Ctrl+F search within current session |
+| ⌨️ **Command Palette** | Ctrl+K for quick navigation |
 
 ---
 
-## ⚙️ Configuration
+## 🚀 Getting Started
 
-Go to **Settings** (⚙️ in the sidebar):
+### Prerequisites
 
-| Field | Default | Description |
-|---|---|---|
-| **Host** | `127.0.0.1` | IronClaw gateway hostname or IP |
-| **Port** | `3000` | Gateway port |
-| **Auth Token** | *(empty)* | Bearer token if your gateway requires auth |
-| **Use HTTPS** | Off | Enable for TLS connections |
-| **Font size** | `14` | UI font size (px) |
-| **Send on Enter** | On | Off = Shift+Enter sends, Enter adds newline |
+- [IronClaw](https://github.com/nearai/ironclaw) running locally
+- Default gateway: `http://127.0.0.1:3000`
 
-Hit **Save & Connect** — the app reconnects immediately.
+### Setup
+
+1. Download & extract the zip
+2. Run `IronClaw Companion.exe`
+3. Open **Settings** (tab 5 or Ctrl+5)
+4. Set your IronClaw host/port
+5. Paste your API token — it's encrypted and stored securely
+6. Click **Test Connection** → **Save**
 
 ---
 
 ## ⌨️ Keyboard Shortcuts
 
 | Shortcut | Action |
-|---|---|
-| `Ctrl+K` | Open command palette |
-| `Ctrl+F` | Search chat messages |
+|----------|--------|
+| `Ctrl+K` | Command palette |
+| `Ctrl+F` | Search chat |
+| `Ctrl+1–5` | Switch tabs (Chat / Jobs / Memory / Status / Settings) |
+| `Ctrl+N` | New chat session |
+| `Ctrl+E` | Export chat |
+| `Ctrl+P` | Pinned messages |
 | `Enter` | Send message (configurable) |
-| `Shift+Enter` | New line in message input |
-| `Esc` | Close search bar / palette |
-| `↑` / `↓` | Navigate search results or palette |
+| `Shift+Enter` | New line |
+
+## 💬 Slash Commands
+
+Type `/` in the chat input for autocomplete:
+
+| Command | Action |
+|---------|--------|
+| `/help` | List all commands |
+| `/clear` | Clear chat history |
+| `/export` | Export chat to Markdown |
+| `/pins` | Show pinned messages panel |
+| `/session` | List chat sessions |
+| `/agent` | List agent profiles |
+| `/status` | Jump to Status tab |
 
 ---
 
-## 🔒 Security
+## 🤖 Multi-Agent Profiles
 
-Built with security as a first-class concern. Every release passes `npm audit` with **0 vulnerabilities**.
+Manage multiple IronClaw instances from one app:
 
-> Full security policy and vulnerability disclosure: [SECURITY.md](SECURITY.md)
+1. Click **+** in the profile bar at the top
+2. Enter name, host, port, and optional token
+3. Click any profile to switch instantly
 
-| Protection | Implementation |
-|---|---|
-| **XSS Prevention** | All text HTML-escaped before render; code blocks extracted to safe placeholders first |
-| **IPC Sender Validation** | Every IPC handler verifies `event.sender === mainWindow.webContents` |
-| **Rate Limiting** | Token-bucket: max 1 stream/sec, max 5 memory searches/10s |
-| **Stream ID Enforcement** | `stream_\d+` regex validated on both preload and main |
-| **Buffer & Size Caps** | 10 MB HTTP cap · 8 MB SSE cap · 128 KB per-line guard |
-| **Host Validation** | `0.0.0.0` blocked · hostname regex enforced · token max 2048 chars |
-| **Store Hardening** | Prototype pollution protection · key max 128 chars · value max 512 KB |
-| **URL Injection** | `openExternal` allows only `http://` and `https://` |
-| **Auth Token Safety** | Token sent via `Authorization: Bearer` header — never in URL |
-| **Renderer Sandbox** | `sandbox: true` — full Chromium process sandbox |
-| **Content Security Policy** | `default-src 'none'`, `connect-src 'none'`, `object-src 'none'`, `base-uri 'none'` |
-| **Atomic Config Writes** | Temp file + rename — no corruption on crash · mode `0o600` (owner-only) |
-| **Memory Caps** | Chat history capped at 200 messages · `formatMessage` capped at 200 KB |
-| **Timer Safety** | GC timers use `.unref()` · `isDestroyed()` guard before every IPC send |
+Perfect for local dev + remote server, or multiple agent configs.
 
 ---
 
-## 🛠️ Build from Source
+## 🛡️ Security
 
-**Requirements:** Node.js 18+, npm 9+
+- API token encrypted via Electron `safeStorage` (OS keychain on Windows = DPAPI)
+- IPC channels fully validated — no arbitrary code execution from renderer
+- CSP locked: `script-src 'self'`, no inline scripts, no remote scripts
+- Rate limiting on all IPC channels (10 req/s burst protection)
+- Token never stored in plaintext; never sent to renderer process
+
+See [SECURITY.md](SECURITY.md) for the full security model and disclosure policy.
+
+---
+
+## 🔧 Development
 
 ```bash
 git clone https://github.com/ddlpng/ironclaw-companion.git
 cd ironclaw-companion
 npm install
+npm start           # dev mode
+npm run build:win   # build Windows exe
+```
 
-# Development (hot reload)
-npm run dev
+### Project Structure
 
-# Production builds
-npm run build:win     # Windows portable exe
-npm run build:linux   # AppImage + .deb
-npm run build:mac     # macOS .dmg
+```
+src/
+  main.js          # Electron main process — IPC, ping, profiles
+  preload.js       # Secure bridge (contextBridge)
+  store.js         # Encrypted storage (electron-store)
+  renderer/
+    app.js         # UI logic — chat, sessions, profiles, slash commands
+    index.html     # Single page shell
+    styles.css     # All styles
+    vendor/        # Local highlight.js (syntax highlighting)
 ```
 
 ---
 
-## 📁 Project Structure
+## 🤝 Contributing
 
-```
-ironclaw-companion/
-├── src/
-│   ├── main.js          # Electron main process — IPC, streaming, tray
-│   ├── preload.js       # Secure IPC bridge (contextBridge)
-│   ├── store.js         # Atomic JSON persistence
-│   └── renderer/
-│       ├── index.html   # App shell
-│       ├── app.js       # UI logic — chat, search, palette, templates
-│       └── styles.css   # Styles (dark/light, components)
-├── assets/              # Icons (SVG, PNG, ICO)
-└── package.json
+See [CONTRIBUTING.md](CONTRIBUTING.md) — issues, PRs, and discussions welcome.
+
+**Quick contributor setup:**
+```bash
+npm install
+npm start
+# Make changes → test → submit PR to `dev` branch
 ```
 
 ---
 
 ## 📋 Changelog
 
-### v1.2.1 — Security Patch *(2026-06-06)*
+### v1.3.0
+- Encrypted API token storage (OS keychain via safeStorage)
+- Auto-update checker (GitHub releases API)
+- Multi-session chat with per-session history
+- Multi-agent profiles — switch instances from profile bar
+- Inline image rendering in chat
+- Syntax highlighting for code blocks (highlight.js)
+- Slash commands with autocomplete (`/help`, `/clear`, `/export`, etc.)
+- Pinned messages with side panel (Ctrl+P)
+- Full keyboard shortcuts (Ctrl+1–5, Ctrl+K, Ctrl+F, Ctrl+E, Ctrl+N, Ctrl+P)
 
-**9 IPC hardening fixes** (no new features, no behavior changes for normal use):
+### v1.2.1
+- 9 IPC security hardening fixes
+- SECURITY.md added
 
-- 🔒 **IPC sender validation** — added missing `event.sender` guard to `get-config`, `api-status`, `api-jobs`, `open-web-gateway`, `open-external`, `set-connection`, `get-app-version`
-- 🔒 **isDestroyed() guard** — fixed potential IPC send to destroyed window on app shutdown
-- 🔒 **Job status class injection** — whitelisted job status CSS classes to prevent injection
-- 🔒 **Job data length caps** — title/ID/date now length-capped against malicious gateway data
-- 🔒 **Score validation** — memory relevance score clamped to [0,1]; NaN/Infinity rejected
-- 🔒 **Stream chunk guard** — client-side 65KB chunk cap added (defense-in-depth)
-- 🔒 **Error sanitization** — stream error messages now sanitized before display
-- 🔒 **Export anchor fix** — `exportChat()` DOM insertion fixed for reliable downloads
-- 🔒 **Variable shadow fix** — `path` variable renamed to avoid shadowing Node.js `path` module
+### v1.2.0
+- Token counter (warn at 60k, danger at 100k)
+- Exponential backoff ping
+- Command palette (Ctrl+K)
+- Search within chat (Ctrl+F)
+- Agent profiles bar
+- Export to Markdown
 
----
-
-### v1.2.0 — Power User Features *(2026-06-06)*
-
-**8 new features shipped:**
-
-- 📤 **Export chat** — download conversation as `.md` with timestamps
-- 📋 **Copy button** — hover any bubble → 1-click copy
-- 🔍 **Chat search** — `Ctrl+F`, highlight matches, ↑↓ navigation
-- ⌨️ **Command palette** — `Ctrl+K` for everything: tabs, search, export, refresh
-- 📝 **Prompt templates** — 6 built-in templates via quick picker in input
-- 🔢 **Token counter** — live ~token estimate, warns at 60k / 100k
-- 🗑️ **Clear confirmation** — dialog before clearing history
-- 🔄 **Exponential backoff reconnect** — 4s → 8s → 16s → 32s → 60s when gateway is down
+### v1.1.0
+- Initial release: streaming chat, jobs, memory, status, tray
 
 ---
 
-### v1.1.0 — Chat History + Markdown *(2026-06-06)*
+## 📄 License
 
-- 💾 **Persistent chat history** — conversations survive restarts, auto-saved (500ms debounce), capped at 200 messages
-- ✨ **Markdown rendering** — bold, `inline code`, bullet lists, and fenced code blocks
-- Timestamps stored with every message
-- Full security hardening (rate limiting, IPC validation, size caps, store hardening)
+MIT © 2026 IronClaw Companion contributors
 
 ---
 
-### v1.0.0 — Initial Release *(2026-06-01)*
-
-- Real-time streaming chat (SSE)
-- Jobs dashboard, memory search, status monitor
-- Dark/Light theme, system tray, desktop notifications
-- Atomic config persistence, full XSS prevention
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Read [CONTRIBUTING.md](CONTRIBUTING.md) to get started.
-
-For deep dives into the internals, see [DEVELOPMENT.md](DEVELOPMENT.md).
-
-Bug reports, feature requests, and questions: use [GitHub Issues](https://github.com/ddlpng/ironclaw-companion/issues) — templates provided.
-
----
-
-## 🤝 Related
-
-- [IronClaw](https://github.com/nearai/ironclaw) — The AI Agent this app connects to
-
----
-
-<div align="center">
-
-Made with ⚔️ · MIT License
-
-</div>
+*Built for [IronClaw](https://github.com/nearai/ironclaw) by NEAR AI*
