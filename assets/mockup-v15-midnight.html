@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>IronClaw Companion v1.5.0 — Midnight Blue</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { width: 1200px; height: 750px; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0a0f1e; color: #e2e8f0; font-size: 13px; display: flex; }
+
+.sidebar {
+  width: 200px; min-width: 200px;
+  background: #111827;
+  border-right: 1px solid #1e2840;
+  display: flex; flex-direction: column; padding: 12px 0;
+}
+.sidebar-logo { display: flex; align-items: center; gap: 10px; padding: 8px 16px 16px; }
+.logo-icon { font-size: 20px; }
+.logo-text { font-size: 15px; font-weight: 700; color: #e2e8f0; }
+
+.agent-switcher { padding: 8px; border-bottom: 1px solid #1e2840; margin-bottom: 8px; }
+.agent-switcher-label { font-size: 10px; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.8px; padding: 0 4px 6px; }
+.agent-switcher-list { display: flex; flex-direction: column; gap: 2px; }
+.agent-avatar-btn { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: none; background: none; color: #6b7280; cursor: pointer; border-radius: 6px; width: 100%; text-align: left; }
+.agent-avatar-btn.active { background: rgba(59,130,246,0.15); color: #3b82f6; }
+.agent-avatar-icon { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #fff; flex-shrink: 0; }
+.agent-avatar-btn.active .agent-avatar-icon { outline: 2px solid #3b82f6; outline-offset: 2px; }
+.agent-avatar-name { font-size: 12px; font-weight: 500; }
+.agent-add-btn { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border: 1px dashed #1e2840; background: none; color: #374151; cursor: pointer; border-radius: 6px; width: 100%; margin-top: 2px; }
+
+.sidebar-nav { flex: 1; display: flex; flex-direction: column; gap: 2px; padding: 0 8px; }
+.nav-btn { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: none; background: none; color: #6b7280; font-size: 13px; cursor: pointer; border-radius: 5px; width: 100%; }
+.nav-btn.active { background: rgba(59,130,246,0.15); color: #3b82f6; }
+.nav-badge { background: #3b82f6; color: #fff; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 10px; margin-left: auto; }
+
+.sidebar-bottom { padding: 0 8px; }
+.connection-badge { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 5px; background: #1e2840; }
+.conn-dot { width: 8px; height: 8px; border-radius: 50%; background: #10b981; box-shadow: 0 0 6px #10b981; }
+.conn-label { font-size: 11px; color: #6b7280; }
+
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.panel-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px 12px; border-bottom: 1px solid #1e2840; }
+.panel-title { display: flex; align-items: center; gap: 10px; }
+.panel-header h2 { font-size: 15px; font-weight: 600; }
+.model-badge { font-size: 11px; padding: 2px 8px; border-radius: 20px; background: #1e2840; color: #6b7280; font-family: monospace; }
+.panel-actions { display: flex; gap: 6px; }
+.btn { display: inline-flex; align-items: center; gap: 5px; padding: 5px 11px; border: none; border-radius: 5px; font-size: 12px; cursor: pointer; font-weight: 500; }
+.btn-ghost { background: #1e2840; color: #6b7280; border: 1px solid #243050; }
+.btn-primary { background: #3b82f6; color: #fff; }
+
+/* Export modal */
+.modal-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+.modal-box { background: #111827; border: 1px solid #1e2840; border-radius: 10px; padding: 24px; width: 380px; box-shadow: 0 8px 40px rgba(0,0,0,0.6); }
+.modal-title { font-size: 15px; font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+.modal-desc { font-size: 12px; color: #6b7280; margin-bottom: 18px; }
+.export-fmt-btn { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid #1e2840; border-radius: 8px; background: #0a0f1e; cursor: pointer; width: 100%; margin-bottom: 8px; color: #e2e8f0; text-align: left; }
+.export-fmt-btn:hover, .export-fmt-btn.focus { border-color: #3b82f6; background: rgba(59,130,246,0.08); }
+.export-fmt-icon { font-size: 20px; }
+.export-fmt-label { font-size: 13px; font-weight: 600; }
+.export-fmt-desc { font-size: 11px; color: #6b7280; margin-top: 2px; }
+
+.messages-area { flex: 1; overflow: hidden; padding: 20px; display: flex; flex-direction: column; gap: 14px; filter: blur(1px); }
+.message { display: flex; gap: 12px; }
+.message.user { flex-direction: row-reverse; }
+.msg-avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; }
+.message.user .msg-avatar { background: #3b82f6; color: #fff; }
+.message.agent .msg-avatar { background: #1e2840; color: #3b82f6; }
+.msg-content { max-width: 72%; display: flex; flex-direction: column; gap: 4px; }
+.msg-bubble { padding: 10px 14px; border-radius: 12px; font-size: 13px; line-height: 1.6; }
+.message.user .msg-bubble { background: #3b82f6; color: #fff; border-bottom-right-radius: 4px; }
+.message.agent .msg-bubble { background: #111827; border: 1px solid #1e2840; border-bottom-left-radius: 4px; }
+
+.input-area { border-top: 1px solid #1e2840; padding: 12px 20px; filter: blur(1px); }
+.input-row { display: flex; gap: 8px; }
+.textarea-wrap { flex: 1; background: #111827; border: 1px solid #1e2840; border-radius: 10px; }
+textarea { width: 100%; padding: 9px 14px; background: none; border: none; outline: none; color: #e2e8f0; font-size: 13px; resize: none; }
+.send-btn { width: 40px; height: 38px; border: none; border-radius: 10px; background: #3b82f6; color: #fff; cursor: pointer; }
+
+.version-badge { position: absolute; top: 12px; right: 16px; background: rgba(59,130,246,0.2); color: #3b82f6; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 4px; border: 1px solid rgba(59,130,246,0.3); }
+</style>
+</head>
+<body style="position:relative">
+
+<div class="sidebar">
+  <div class="sidebar-logo">
+    <span class="logo-icon">⚔️</span>
+    <span class="logo-text">IronClaw</span>
+  </div>
+  <div class="agent-switcher">
+    <div class="agent-switcher-label">Agents</div>
+    <div class="agent-switcher-list">
+      <button class="agent-avatar-btn active">
+        <span class="agent-avatar-icon" style="background:#3b82f6">LA</span>
+        <span class="agent-avatar-name">Local Agent</span>
+      </button>
+      <button class="agent-avatar-btn">
+        <span class="agent-avatar-icon" style="background:#10b981">DA</span>
+        <span class="agent-avatar-name">Dev Agent</span>
+      </button>
+      <button class="agent-add-btn">
+        <span style="font-size:18px;color:#374151;width:26px;text-align:center">+</span>
+        <span style="font-size:12px;color:#374151">Add Agent</span>
+      </button>
+    </div>
+  </div>
+  <nav class="sidebar-nav">
+    <button class="nav-btn active">💬 Chat</button>
+    <button class="nav-btn">📋 Jobs</button>
+    <button class="nav-btn">🧠 Memory</button>
+    <button class="nav-btn">📌 Pins <span class="nav-badge">2</span></button>
+    <button class="nav-btn">📡 Status</button>
+    <button class="nav-btn">⚙️ Settings</button>
+  </nav>
+  <div class="sidebar-bottom">
+    <div class="connection-badge">
+      <div class="conn-dot"></div>
+      <span class="conn-label">Connected</span>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="panel-header">
+    <div class="panel-title">
+      <h2>💬 Project Chat</h2>
+      <span class="model-badge">llama3.2:3b</span>
+    </div>
+    <div class="panel-actions">
+      <button class="btn btn-ghost">+ New</button>
+      <button class="btn btn-primary">📤 Export</button>
+    </div>
+  </div>
+  <div class="messages-area">
+    <div class="message user">
+      <div class="msg-avatar">Y</div>
+      <div class="msg-content">
+        <div class="msg-bubble">Export this conversation as JSON with metadata</div>
+      </div>
+    </div>
+    <div class="message agent">
+      <div class="msg-avatar">⚔</div>
+      <div class="msg-content">
+        <div class="msg-bubble">Sure! Press Ctrl+E to open the Export modal, then select JSON format — it includes session name, agent info, host, and full timestamps for every message.</div>
+      </div>
+    </div>
+  </div>
+  <div class="input-area">
+    <div class="input-row">
+      <div class="textarea-wrap"><textarea rows="1" placeholder="Message IronClaw..."></textarea></div>
+      <button class="send-btn">▶</button>
+    </div>
+  </div>
+</div>
+
+<!-- Export Modal (v1.5) -->
+<div class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-title">📤 Export Chat</div>
+    <div class="modal-desc">Choose a format to export <strong>Project Chat</strong></div>
+
+    <button class="export-fmt-btn focus">
+      <span class="export-fmt-icon">📝</span>
+      <div>
+        <div class="export-fmt-label">Markdown</div>
+        <div class="export-fmt-desc">Headers, timestamps, formatted for reading</div>
+      </div>
+    </button>
+    <button class="export-fmt-btn">
+      <span class="export-fmt-icon">{ }</span>
+      <div>
+        <div class="export-fmt-label">JSON</div>
+        <div class="export-fmt-desc">Full metadata: session, agent, host, timestamps</div>
+      </div>
+    </button>
+    <button class="export-fmt-btn">
+      <span class="export-fmt-icon">📄</span>
+      <div>
+        <div class="export-fmt-label">Plain Text</div>
+        <div class="export-fmt-desc">Clean, no markup</div>
+      </div>
+    </button>
+    <button class="export-fmt-btn">
+      <span class="export-fmt-icon">📋</span>
+      <div>
+        <div class="export-fmt-label">Copy to Clipboard</div>
+        <div class="export-fmt-desc">Instant copy, no file download</div>
+      </div>
+    </button>
+  </div>
+</div>
+
+<div class="version-badge">v1.5.0 · Midnight Blue</div>
+</body>
+</html>

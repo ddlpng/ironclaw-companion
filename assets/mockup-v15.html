@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>IronClaw Companion v1.5.0</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { width: 1200px; height: 750px; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0d1117; color: #e6edf3; font-size: 13px; display: flex; }
+
+/* Sidebar */
+.sidebar {
+  width: 200px; min-width: 200px;
+  background: #161b22;
+  border-right: 1px solid #30363d;
+  display: flex; flex-direction: column; padding: 12px 0;
+}
+.sidebar-logo {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 16px 16px;
+}
+.logo-icon { font-size: 20px; }
+.logo-text { font-size: 15px; font-weight: 700; color: #e6edf3; }
+
+/* Agent switcher */
+.agent-switcher { padding: 8px; border-bottom: 1px solid #21262d; margin-bottom: 8px; }
+.agent-switcher-label { font-size: 10px; font-weight: 600; color: #484f58; text-transform: uppercase; letter-spacing: 0.8px; padding: 0 4px 6px; }
+.agent-switcher-list { display: flex; flex-direction: column; gap: 2px; }
+.agent-avatar-btn {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 8px; border: none; background: none;
+  color: #8b949e; cursor: pointer; border-radius: 6px;
+  width: 100%; text-align: left; transition: all 0.15s;
+}
+.agent-avatar-btn.active { background: rgba(224,82,82,0.12); color: #e05252; }
+.agent-avatar-icon {
+  width: 26px; height: 26px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; color: #fff; flex-shrink: 0;
+}
+.agent-avatar-btn.active .agent-avatar-icon { outline: 2px solid #e05252; outline-offset: 2px; }
+.agent-avatar-name { font-size: 12px; font-weight: 500; }
+.agent-add-btn {
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 8px; border: 1px dashed #30363d; background: none;
+  color: #484f58; cursor: pointer; border-radius: 6px;
+  width: 100%; margin-top: 2px;
+}
+.agent-add-icon { width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #484f58; }
+
+/* Nav */
+.sidebar-nav { flex: 1; display: flex; flex-direction: column; gap: 2px; padding: 0 8px; }
+.nav-btn {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; border: none; background: none;
+  color: #8b949e; font-size: 13px; cursor: pointer;
+  border-radius: 5px; width: 100%; position: relative;
+}
+.nav-btn.active { background: rgba(224,82,82,0.12); color: #e05252; }
+.nav-btn svg { width: 16px; height: 16px; }
+.nav-badge {
+  background: #e05252; color: #fff;
+  font-size: 10px; font-weight: 700;
+  padding: 1px 5px; border-radius: 10px;
+  margin-left: auto;
+}
+
+/* Connection */
+.sidebar-bottom { padding: 0 8px; }
+.connection-badge { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 5px; background: #21262d; }
+.conn-dot { width: 8px; height: 8px; border-radius: 50%; background: #3fb950; box-shadow: 0 0 6px #3fb950; }
+.conn-label { font-size: 11px; color: #8b949e; }
+
+/* Main */
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 20px 12px; border-bottom: 1px solid #30363d;
+}
+.panel-title { display: flex; align-items: center; gap: 10px; }
+.panel-header h2 { font-size: 15px; font-weight: 600; }
+.model-badge { font-size: 11px; padding: 2px 8px; border-radius: 20px; background: #21262d; color: #8b949e; font-family: monospace; }
+.panel-actions { display: flex; gap: 6px; }
+.btn { display: inline-flex; align-items: center; gap: 5px; padding: 5px 11px; border: none; border-radius: 5px; font-size: 12px; cursor: pointer; font-weight: 500; }
+.btn-ghost { background: #21262d; color: #8b949e; border: 1px solid #30363d; }
+.btn-primary { background: #e05252; color: #fff; }
+
+/* Search bar */
+.search-bar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 16px; background: #161b22; border-bottom: 1px solid #30363d;
+}
+.search-input {
+  flex: 1; background: #0d1117; border: 1px solid #30363d; border-radius: 6px;
+  padding: 5px 10px; color: #e6edf3; font-size: 12px;
+}
+.search-filter-select {
+  background: #21262d; border: 1px solid #30363d; border-radius: 5px;
+  padding: 4px 8px; color: #8b949e; font-size: 11px;
+}
+.search-count { font-size: 11px; color: #8b949e; white-space: nowrap; }
+
+/* Messages */
+.messages-area { flex: 1; overflow: hidden; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.message { display: flex; gap: 12px; }
+.message.user { flex-direction: row-reverse; }
+.msg-avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; }
+.message.user .msg-avatar { background: #e05252; color: #fff; }
+.message.agent .msg-avatar { background: #21262d; color: #e05252; }
+.msg-content { max-width: 72%; display: flex; flex-direction: column; gap: 4px; }
+.msg-bubble { padding: 10px 14px; border-radius: 12px; font-size: 13px; line-height: 1.6; }
+.message.user .msg-bubble { background: #e05252; color: #fff; border-bottom-right-radius: 4px; }
+.message.agent .msg-bubble { background: #161b22; border: 1px solid #30363d; border-bottom-left-radius: 4px; }
+.message.agent .msg-bubble mark { background: rgba(59,130,246,0.35); color: #fff; border-radius: 2px; padding: 0 2px; }
+.msg-time { font-size: 10px; color: #484f58; padding: 0 4px; }
+.message.user .msg-time { text-align: right; }
+
+/* Input */
+.input-area { border-top: 1px solid #30363d; padding: 12px 20px; }
+.input-row { display: flex; gap: 8px; align-items: flex-end; }
+.textarea-wrap { flex: 1; background: #161b22; border: 1px solid #e05252; border-radius: 10px; }
+textarea { width: 100%; padding: 9px 14px; background: none; border: none; outline: none; color: #e6edf3; font-family: inherit; font-size: 13px; resize: none; }
+.send-btn { width: 40px; height: 38px; border: none; border-radius: 10px; background: #e05252; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.input-hints { padding-top: 4px; display: flex; justify-content: space-between; }
+.token-counter { font-size: 11px; color: #8b949e; font-family: monospace; }
+
+/* Floating pins panel */
+.pins-panel {
+  position: absolute; top: 0; right: 0;
+  width: 280px; height: 750px;
+  background: #161b22; border-left: 1px solid #30363d;
+  display: flex; flex-direction: column; z-index: 500;
+  box-shadow: -4px 0 16px rgba(0,0,0,0.4);
+}
+.pins-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px; border-bottom: 1px solid #30363d;
+  font-size: 13px; font-weight: 600;
+}
+.pins-list { flex: 1; overflow: hidden; padding: 8px; display: flex; flex-direction: column; gap: 8px; }
+.pin-item { padding: 10px 12px; border: 1px solid #21262d; border-radius: 6px; }
+.pin-meta { color: #484f58; font-size: 11px; margin-bottom: 4px; }
+.pin-content { color: #c9d1d9; font-size: 12px; line-height: 1.5; cursor: pointer; }
+.pin-content:hover { color: #e6edf3; }
+.pin-remove-btn { margin-top: 6px; background: none; border: 1px solid #30363d; border-radius: 4px; padding: 2px 8px; font-size: 11px; color: #8b949e; cursor: pointer; }
+
+/* Version badge */
+.version-badge {
+  position: absolute; top: 12px; right: 16px;
+  background: rgba(59,130,246,0.2); color: #3b82f6;
+  font-size: 11px; font-weight: 700; padding: 3px 8px;
+  border-radius: 4px; border: 1px solid rgba(59,130,246,0.3);
+}
+</style>
+</head>
+<body style="position:relative">
+
+<!-- Sidebar -->
+<div class="sidebar">
+  <div class="sidebar-logo">
+    <span class="logo-icon">⚔️</span>
+    <span class="logo-text">IronClaw</span>
+  </div>
+
+  <!-- Agent Switcher (v1.5) -->
+  <div class="agent-switcher">
+    <div class="agent-switcher-label">Agents</div>
+    <div class="agent-switcher-list">
+      <button class="agent-avatar-btn active">
+        <span class="agent-avatar-icon" style="background:#e05252">LA</span>
+        <span class="agent-avatar-name">Local Agent</span>
+      </button>
+      <button class="agent-avatar-btn">
+        <span class="agent-avatar-icon" style="background:#3b82f6">RA</span>
+        <span class="agent-avatar-name">Remote Agent</span>
+      </button>
+      <button class="agent-avatar-btn">
+        <span class="agent-avatar-icon" style="background:#10b981">DA</span>
+        <span class="agent-avatar-name">Dev Agent</span>
+      </button>
+      <button class="agent-add-btn">
+        <span class="agent-add-icon">+</span>
+        <span style="font-size:12px;color:#484f58">Add Agent</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Nav -->
+  <nav class="sidebar-nav">
+    <button class="nav-btn active">
+      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h12v10H2z" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M5 6h6M5 8h4" stroke="currentColor" stroke-width="1.2"/></svg>
+      Chat
+    </button>
+    <button class="nav-btn">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="2" y="3" width="12" height="10" rx="1"/><path d="M5 7h6M5 9h4"/></svg>
+      Jobs
+    </button>
+    <button class="nav-btn">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></svg>
+      Memory
+    </button>
+    <button class="nav-btn">
+      <!-- Pins with badge (v1.5) -->
+      📌 Pins
+      <span class="nav-badge">3</span>
+    </button>
+    <button class="nav-btn">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><circle cx="8" cy="8" r="6"/><path d="M8 8h3M8 5v3"/></svg>
+      Status
+    </button>
+    <button class="nav-btn">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><circle cx="8" cy="8" r="3"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2"/></svg>
+      Settings
+    </button>
+  </nav>
+
+  <div class="sidebar-bottom">
+    <div class="connection-badge">
+      <div class="conn-dot"></div>
+      <span class="conn-label">127.0.0.1:3000</span>
+    </div>
+  </div>
+</div>
+
+<!-- Main content -->
+<div class="main">
+  <div class="panel-header">
+    <div class="panel-title">
+      <h2>💬 General Chat</h2>
+      <span class="model-badge">llama3.2:3b</span>
+    </div>
+    <div class="panel-actions">
+      <button class="btn btn-ghost">+ New</button>
+      <button class="btn btn-ghost">🔍</button>
+      <button class="btn btn-primary">📤 Export</button>
+    </div>
+  </div>
+
+  <!-- Search bar (v1.5 enhanced) -->
+  <div class="search-bar">
+    <input class="search-input" placeholder="Search messages..." value="agent" />
+    <select class="search-filter-select"><option>Last 7 days</option></select>
+    <select class="search-filter-select"><option>All roles</option></select>
+    <span class="search-count">2 of 4</span>
+    <button style="background:none;border:none;color:#484f58;cursor:pointer;font-size:16px">×</button>
+  </div>
+
+  <!-- Messages -->
+  <div class="messages-area">
+    <div class="message user">
+      <div class="msg-avatar">Y</div>
+      <div class="msg-content">
+        <div class="msg-bubble">How do I switch between agent profiles in v1.5?</div>
+        <div class="msg-time">10:24 AM</div>
+      </div>
+    </div>
+    <div class="message agent">
+      <div class="msg-avatar">⚔</div>
+      <div class="msg-content">
+        <div class="msg-bubble">In v1.5, there's a new <mark>Agent</mark> Switcher in the left sidebar. Each <mark>agent</mark> profile shows as a color-coded avatar with initials — click any to switch instantly. Hit <strong>+</strong> to add a new agent profile. Max 20 profiles supported.</div>
+        <div class="msg-time">10:24 AM</div>
+      </div>
+    </div>
+    <div class="message user">
+      <div class="msg-avatar">Y</div>
+      <div class="msg-content">
+        <div class="msg-bubble">Nice! What about export formats?</div>
+        <div class="msg-time">10:25 AM</div>
+      </div>
+    </div>
+    <div class="message agent">
+      <div class="msg-avatar">⚔</div>
+      <div class="msg-content">
+        <div class="msg-bubble">Press <strong>Ctrl+E</strong> to open the export modal. You can export as:<br><br>• <strong>Markdown</strong> — headers + timestamps<br>• <strong>JSON</strong> — full metadata (session, agent, host, timestamps)<br>• <strong>Plain Text</strong> — clean readable format<br>• <strong>Clipboard</strong> — copy instantly</div>
+        <div class="msg-time">10:25 AM</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Input -->
+  <div class="input-area">
+    <div class="input-row">
+      <div class="textarea-wrap">
+        <textarea rows="1" placeholder="Message IronClaw...">Tell me about the new keyboard shortcuts</textarea>
+      </div>
+      <button class="send-btn">▶</button>
+    </div>
+    <div class="input-hints">
+      <span style="font-size:11px;color:#484f58">Enter to send · Shift+Enter for newline · / for commands</span>
+      <span class="token-counter">~1,847 tokens · ~$0.002</span>
+    </div>
+  </div>
+</div>
+
+<!-- Pins Panel (v1.5 floating overlay) -->
+<div class="pins-panel">
+  <div class="pins-header">
+    📌 Pinned Messages
+    <button style="background:none;border:none;color:#484f58;cursor:pointer;font-size:18px">×</button>
+  </div>
+  <div class="pins-list">
+    <div class="pin-item">
+      <div class="pin-meta">IronClaw · 10:24 AM</div>
+      <div class="pin-content">In v1.5, there's a new Agent Switcher in the left sidebar...</div>
+      <button class="pin-remove-btn">Unpin</button>
+    </div>
+    <div class="pin-item">
+      <div class="pin-meta">You · 10:20 AM</div>
+      <div class="pin-content">How do I configure the Midnight Blue theme?</div>
+      <button class="pin-remove-btn">Unpin</button>
+    </div>
+    <div class="pin-item">
+      <div class="pin-meta">IronClaw · 10:18 AM</div>
+      <div class="pin-content">Press Ctrl+, to open Settings, then pick Midnight Blue from the Theme dropdown.</div>
+      <button class="pin-remove-btn">Unpin</button>
+    </div>
+  </div>
+</div>
+
+<!-- v1.5 version badge -->
+<div class="version-badge">v1.5.0</div>
+
+</body>
+</html>
