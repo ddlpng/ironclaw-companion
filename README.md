@@ -5,25 +5,43 @@
 [![Release](https://img.shields.io/github/v/release/ddlpng/ironclaw-companion?style=flat-square&color=e05252)](https://github.com/ddlpng/ironclaw-companion/releases)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
 [![Electron](https://img.shields.io/badge/Electron-42-47848F?style=flat-square&logo=electron&logoColor=white)](https://www.electronjs.org/)
-[![Platform](https://img.shields.io/badge/platform-Windows-0078d7?style=flat-square&logo=windows)](https://github.com/ddlpng/ironclaw-companion/releases)
+[![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Windows-brightgreen?style=flat-square)](https://github.com/ddlpng/ironclaw-companion/releases)
 
 ---
 
 ## 📥 Download
 
-**[→ Latest Release: v1.3.0](https://github.com/ddlpng/ironclaw-companion/releases/latest)**
+**[→ Latest Release: v1.5.0](https://github.com/ddlpng/ironclaw-companion/releases/latest)**
 
 | Platform | File | Note |
 |----------|------|------|
-| Windows (x64) | `ironclaw-companion-v1.3.0-win-x64.zip` | Portable, no install needed |
+| Linux (x64) | `IronClaw Companion-1.5.0.AppImage` | Portable, chmod +x and run |
+| Linux (x64) | `ironclaw-companion_1.5.0_amd64.deb` | Debian/Ubuntu package |
+| Windows (x64) | `ironclaw-companion-1.3.0-win-x64.zip` | Portable, no install needed |
 
-**Extract → run `IronClaw Companion.exe`**. No installer, no admin rights required.
+**Linux AppImage:**
+```bash
+chmod +x "IronClaw Companion-1.5.0.AppImage"
+./"IronClaw Companion-1.5.0.AppImage"
+```
 
 ---
 
 ## ✨ Features
 
-### v1.3.0 — Latest
+### v1.5.0 — Latest
+
+| Feature | Description |
+|---------|-------------|
+| 🤖 **Agent Switcher** | Discord-style sidebar with color-coded avatars + initials — click to switch agent profiles instantly |
+| 📤 **Export Modal** | Choose export format: Markdown / JSON (with full metadata) / Plain Text / Copy to Clipboard |
+| 🔍 **Search Enhanced** | Date filter (Today / 7d / 30d / All), role filter (User / Agent), text highlight in bubbles, match count "X of Y" |
+| 📌 **Pins Nav Button** | Pinned message badge count in sidebar, click any pin to scroll & highlight the original message |
+| 🎨 **Midnight Blue Theme** | Deep blue aesthetic — `#0a0f1e` background, `#3b82f6` accent |
+| ⌨️ **New Shortcuts** | `Ctrl+,` → Settings, `Alt+←/→` → navigate sessions, `Ctrl+E` → Export modal |
+| 🔢 **Token Cost Estimate** | Token counter now shows estimated cost alongside count: `~1,234 tokens · ~$0.001` |
+
+### v1.3.0
 
 | Feature | Description |
 |---------|-------------|
@@ -31,10 +49,10 @@
 | 🔄 **Auto-Update Checker** | Checks GitHub releases on startup, shows banner + download link |
 | 💬 **Multi-Session Chat** | Up to 20 named sessions, per-session history, instant switching |
 | 🤖 **Multi-Agent Profiles** | Switch between IronClaw instances without touching Settings |
-| 🖼️ **Inline Images** | Agent-sent `https://...` image URLs render directly in chat |
+| 🖼️ **Inline Images** | Agent-sent image URLs render directly in chat |
 | 🎨 **Syntax Highlighting** | Code blocks get full language-aware highlighting (highlight.js) |
 | `/` **Slash Commands** | `/help`, `/clear`, `/export`, `/pins`, `/session`, `/agent`, `/status` |
-| 📌 **Pinned Messages** | Pin important messages for quick reference (Ctrl+P) |
+| 📌 **Pinned Messages** | Pin important messages for quick reference |
 | ⌨️ **Keyboard Shortcuts** | Ctrl+1–5 tabs, Ctrl+K palette, Ctrl+F search, Ctrl+E export, Ctrl+N new session |
 
 ### v1.2.x — Security Hardening
@@ -44,20 +62,6 @@
 | 🛡️ **IPC Hardening** | 9 security fixes — sender verification, type guards, rate limiting |
 | 📋 **SECURITY.md** | Responsible disclosure policy, architecture notes |
 | 🔑 **Token Guard** | API token never exposed to renderer process |
-
-### v1.1.0 — Core
-
-| Feature | Description |
-|---------|-------------|
-| 💬 **Streaming Chat** | Real-time streamed responses from IronClaw agent |
-| 📊 **Jobs Monitor** | View active/completed agent jobs with live status |
-| 🧠 **Memory Search** | Semantic search across agent memory |
-| 📡 **Status Dashboard** | Model, version, uptime, raw API data |
-| 🔔 **System Tray** | Minimize to tray, desktop notifications |
-| 🎨 **Themes** | Dark / Light / Midnight / Forest |
-| 📤 **Export Chat** | Download conversation as Markdown |
-| 🔍 **Chat Search** | Ctrl+F search within current session |
-| ⌨️ **Command Palette** | Ctrl+K for quick navigation |
 
 ---
 
@@ -70,12 +74,11 @@
 
 ### Setup
 
-1. Download & extract the zip
-2. Run `IronClaw Companion.exe`
-3. Open **Settings** (tab 5 or Ctrl+5)
-4. Set your IronClaw host/port
-5. Paste your API token — it's encrypted and stored securely
-6. Click **Test Connection** → **Save**
+1. Download & run the AppImage (Linux) or exe (Windows)
+2. Open **Settings** (`Ctrl+,` or tab 5)
+3. Set your IronClaw host/port
+4. Paste your API token — encrypted and stored securely
+5. Click **Test Connection** → **Save**
 
 ---
 
@@ -85,10 +88,12 @@
 |----------|--------|
 | `Ctrl+K` | Command palette |
 | `Ctrl+F` | Search chat |
+| `Ctrl+,` | Settings *(v1.5)* |
 | `Ctrl+1–5` | Switch tabs (Chat / Jobs / Memory / Status / Settings) |
 | `Ctrl+N` | New chat session |
-| `Ctrl+E` | Export chat |
-| `Ctrl+P` | Pinned messages |
+| `Ctrl+E` | Export modal *(v1.5)* |
+| `Ctrl+P` | Pinned messages panel |
+| `Alt+←/→` | Navigate between sessions *(v1.5)* |
 | `Enter` | Send message (configurable) |
 | `Shift+Enter` | New line |
 
@@ -100,7 +105,7 @@ Type `/` in the chat input for autocomplete:
 |---------|--------|
 | `/help` | List all commands |
 | `/clear` | Clear chat history |
-| `/export` | Export chat to Markdown |
+| `/export` | Open export modal |
 | `/pins` | Show pinned messages panel |
 | `/session` | List chat sessions |
 | `/agent` | List agent profiles |
@@ -112,17 +117,29 @@ Type `/` in the chat input for autocomplete:
 
 Manage multiple IronClaw instances from one app:
 
-1. Click **+** in the profile bar at the top
-2. Enter name, host, port, and optional token
-3. Click any profile to switch instantly
+- v1.5: **Agent Switcher sidebar** — color-coded avatars with initials, Discord-style
+- Click any agent avatar to switch instantly
+- Click **+** to add a new agent profile
+- Max 20 profiles
 
-Perfect for local dev + remote server, or multiple agent configs.
+---
+
+## 📤 Export
+
+Export the current chat in any format via `Ctrl+E` or `/export`:
+
+| Format | Description |
+|--------|-------------|
+| **Markdown** | Headers, timestamps, formatted for reading |
+| **JSON** | Full metadata: session name, agent name, host, timestamps |
+| **Plain Text** | Clean readable text, no markup |
+| **Clipboard** | Copy entire chat to clipboard instantly |
 
 ---
 
 ## 🛡️ Security
 
-- API token encrypted via Electron `safeStorage` (OS keychain on Windows = DPAPI)
+- API token encrypted via Electron `safeStorage` (OS keychain / DPAPI)
 - IPC channels fully validated — no arbitrary code execution from renderer
 - CSP locked: `script-src 'self'`, no inline scripts, no remote scripts
 - Rate limiting on all IPC channels (10 req/s burst protection)
@@ -138,8 +155,9 @@ See [SECURITY.md](SECURITY.md) for the full security model and disclosure policy
 git clone https://github.com/ddlpng/ironclaw-companion.git
 cd ironclaw-companion
 npm install
-npm start           # dev mode
-npm run build:win   # build Windows exe
+npm start             # dev mode
+npm run build:linux   # build AppImage + deb
+npm run build:win     # build Windows exe
 ```
 
 ### Project Structure
@@ -152,26 +170,22 @@ src/
   renderer/
     app.js         # UI logic — chat, sessions, profiles, slash commands
     index.html     # Single page shell
-    styles.css     # All styles
+    styles.css     # All styles (includes all themes)
     vendor/        # Local highlight.js (syntax highlighting)
 ```
 
 ---
 
-## 🤝 Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) — issues, PRs, and discussions welcome.
-
-**Quick contributor setup:**
-```bash
-npm install
-npm start
-# Make changes → test → submit PR to `dev` branch
-```
-
----
-
 ## 📋 Changelog
+
+### v1.5.0
+- Agent Switcher sidebar — Discord-style avatars with color-coded initials
+- Export Modal — Markdown / JSON (metadata) / Plain Text / Copy to Clipboard
+- Search: date filter, role filter, inline text highlighting, match count
+- Pins nav button with badge count + click-to-scroll-and-highlight
+- Midnight Blue theme (`#0a0f1e` bg, `#3b82f6` accent)
+- Keyboard shortcuts: `Ctrl+,` (settings), `Alt+←/→` (session nav)
+- Token counter now shows estimated cost (~$0.001 per 1K tokens)
 
 ### v1.3.0
 - Encrypted API token storage (OS keychain via safeStorage)
@@ -180,21 +194,18 @@ npm start
 - Multi-agent profiles — switch instances from profile bar
 - Inline image rendering in chat
 - Syntax highlighting for code blocks (highlight.js)
-- Slash commands with autocomplete (`/help`, `/clear`, `/export`, etc.)
-- Pinned messages with side panel (Ctrl+P)
-- Full keyboard shortcuts (Ctrl+1–5, Ctrl+K, Ctrl+F, Ctrl+E, Ctrl+N, Ctrl+P)
+- Slash commands with autocomplete
+- Pinned messages with side panel
+- Full keyboard shortcuts
 
 ### v1.2.1
 - 9 IPC security hardening fixes
 - SECURITY.md added
 
 ### v1.2.0
-- Token counter (warn at 60k, danger at 100k)
-- Exponential backoff ping
-- Command palette (Ctrl+K)
-- Search within chat (Ctrl+F)
-- Agent profiles bar
-- Export to Markdown
+- Token counter, exponential backoff ping
+- Command palette (Ctrl+K), search (Ctrl+F)
+- Agent profiles bar, export to Markdown
 
 ### v1.1.0
 - Initial release: streaming chat, jobs, memory, status, tray
