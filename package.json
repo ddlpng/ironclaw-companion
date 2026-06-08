@@ -1,6 +1,6 @@
 {
   "name": "ironclaw-companion",
-  "version": "1.3.0",
+  "version": "1.5.0",
   "description": "IronClaw Agent Desktop Companion",
   "main": "src/main.js",
   "scripts": {
@@ -51,8 +51,7 @@
             "x64"
           ]
         }
-      ],
-      "rcedit": false
+      ]
     },
     "linux": {
       "icon": "assets/icon.png",

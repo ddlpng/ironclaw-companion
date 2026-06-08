@@ -222,6 +222,7 @@ function pinMessage(id, role, content, timestamp) {
     savePinnedMessages();
     showToast('Unpinned');
     renderPinsPanel();
+    updatePinsBadge(); // v1.5
     return;
   }
   if (pinnedMessages.length >= MAX_PINS) {
@@ -232,6 +233,31 @@ function pinMessage(id, role, content, timestamp) {
   savePinnedMessages();
   showToast('📌 Pinned!');
   renderPinsPanel();
+  updatePinsBadge(); // v1.5
+}
+
+// v1.5: update the pins count badge on nav button
+function updatePinsBadge() {
+  const badge = document.getElementById('pinsNavBadge');
+  if (!badge) return;
+  const count = pinnedMessages.length;
+  badge.textContent = count;
+  badge.style.display = count > 0 ? 'inline-flex' : 'none';
+}
+
+// v1.5: scroll to a pinned message in the chat
+function scrollToPinnedMessage(msgId) {
+  const msgEl = document.querySelector(`[data-msg-id="${CSS.escape(msgId)}"]`);
+  if (!msgEl) { showToast('Message not visible in current session'); return; }
+  // Switch to chat tab first
+  switchTab('chat');
+  hidePinsPanel();
+  msgEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  const bubble = msgEl.querySelector('.msg-bubble');
+  if (bubble) {
+    bubble.classList.add('pin-scroll-target');
+    setTimeout(() => bubble.classList.remove('pin-scroll-target'), 1600);
+  }
 }
 
 function setupPinsPanel() {
@@ -264,8 +290,9 @@ function hidePinsPanel() {
 function renderPinsPanel() {
   const list = document.getElementById('pinsList');
   if (!list) return;
+  updatePinsBadge(); // v1.5: sync badge
   if (!pinnedMessages.length) {
-    list.innerHTML = '<div class="empty-state"><p>No pinned messages yet.<br>Right-click a message to pin it.</p></div>';
+    list.innerHTML = '<div class="empty-state"><p>No pinned messages yet.<br>Click the 📍 button on a message to pin it.</p></div>';
     return;
   }
   list.innerHTML = '';
@@ -275,13 +302,18 @@ function renderPinsPanel() {
     const time = pin.timestamp ? new Date(pin.timestamp).toLocaleString() : '';
     item.innerHTML = `
       <div class="pin-meta">${escapeHtml(pin.role === 'user' ? 'You' : 'IronClaw')} ${time ? '· ' + escapeHtml(time) : ''}</div>
-      <div class="pin-content">${escapeHtml(pin.content.slice(0, 300))}${pin.content.length > 300 ? '…' : ''}</div>
+      <div class="pin-content" style="cursor:pointer" title="Click to jump to message">${escapeHtml(pin.content.slice(0, 300))}${pin.content.length > 300 ? '…' : ''}</div>
       <button class="pin-remove-btn" data-id="${escapeHtml(pin.id)}">Unpin</button>
     `;
+    // v1.5: click pin content to scroll to message
+    item.querySelector('.pin-content').addEventListener('click', () => {
+      scrollToPinnedMessage(pin.id);
+    });
     item.querySelector('.pin-remove-btn').addEventListener('click', () => {
       pinnedMessages = pinnedMessages.filter(p => p.id !== pin.id);
       savePinnedMessages();
       renderPinsPanel();
+      updatePinsBadge();
     });
     list.appendChild(item);
   });
@@ -317,10 +349,30 @@ function setupKeyboardShortcuts() {
       if (btn) btn.click();
     }
 
-    // Ctrl+E — Export chat
+    // Ctrl+E — Export chat (v1.5: opens modal)
     if (e.key === 'e' || e.key === 'E') {
       e.preventDefault();
       exportChat();
+    }
+
+    // Ctrl+, — Settings (v1.5)
+    if (e.key === ',') {
+      e.preventDefault();
+      switchTab('settings');
+    }
+  });
+
+  // v1.5: Alt+Left/Right — navigate sessions
+  document.addEventListener('keydown', (e) => {
+    if (!e.altKey) return;
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+      e.preventDefault();
+      const idx = sessions.findIndex(s => s.id === currentSessionId);
+      if (idx === -1) return;
+      const next = e.key === 'ArrowRight'
+        ? Math.min(idx + 1, sessions.length - 1)
+        : Math.max(idx - 1, 0);
+      if (next !== idx) switchSession(sessions[next].id);
     }
   });
 
@@ -333,6 +385,17 @@ function setupKeyboardShortcuts() {
 }
 
 // ─── Multi-Agent Profiles (NEW) ───────────────────────────────────────────
+// v1.5 Agent avatar colors
+const AGENT_COLORS = ['#e05252','#3b82f6','#10b981','#f59e0b','#8b5cf6','#ec4899','#06b6d4','#84cc16','#f97316','#6366f1'];
+
+function getAgentColor(idx) {
+  return AGENT_COLORS[idx % AGENT_COLORS.length];
+}
+
+function getAgentInitials(name) {
+  return (name || 'A').split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2);
+}
+
 async function loadAgentProfiles() {
   try {
     agentProfiles = await api.getProfiles();
@@ -341,6 +404,7 @@ async function loadAgentProfiles() {
       agentProfiles = [{ id: 'default', name: 'Local Agent', host: '127.0.0.1', port: 3000, useHttps: false }];
     }
     renderAgentProfileBar();
+    renderAgentSwitcher(); // v1.5 sidebar agent switcher
   } catch (e) {
     console.error('[Profiles] Failed to load:', e);
   }
@@ -374,6 +438,7 @@ async function switchAgentProfile(id) {
   if (ok) {
     activeProfileId = id;
     renderAgentProfileBar();
+    renderAgentSwitcher(); // v1.5: refresh sidebar switcher
     // Reload config to reflect new host/port
     config = await api.getConfig() || config;
     document.getElementById('cfgHost').value = config.host || '127.0.0.1';
@@ -428,6 +493,41 @@ function showAddProfileModal() {
   });
   document.getElementById('cancelProfileBtn').addEventListener('click', () => m.remove());
   m.addEventListener('click', (e) => { if (e.target === m) m.remove(); });
+}
+
+// v1.5: Discord-style agent switcher in sidebar
+function renderAgentSwitcher() {
+  const container = document.getElementById('agentSwitcher');
+  if (!container) return;
+  container.innerHTML = '<div class="agent-switcher-label">Agents</div>';
+  const list = document.createElement('div');
+  list.className = 'agent-switcher-list';
+
+  agentProfiles.forEach((profile, idx) => {
+    const btn = document.createElement('button');
+    btn.className = 'agent-avatar-btn' + (profile.id === activeProfileId ? ' active' : '');
+    btn.title = `${profile.name} (${profile.host}:${profile.port})`;
+    const icon = document.createElement('span');
+    icon.className = 'agent-avatar-icon';
+    icon.style.background = getAgentColor(idx);
+    icon.textContent = getAgentInitials(profile.name);
+    const name = document.createElement('span');
+    name.className = 'agent-avatar-name';
+    name.textContent = profile.name.slice(0, 20);
+    btn.appendChild(icon);
+    btn.appendChild(name);
+    btn.addEventListener('click', () => switchAgentProfile(profile.id));
+    list.appendChild(btn);
+  });
+
+  // Add agent button
+  const addBtn = document.createElement('button');
+  addBtn.className = 'agent-add-btn';
+  addBtn.title = 'Add Agent';
+  addBtn.innerHTML = '<span class="agent-add-icon">+</span><span class="agent-add-label">Add Agent</span>';
+  addBtn.addEventListener('click', () => showAddProfileModal());
+  list.appendChild(addBtn);
+  container.appendChild(list);
 }
 
 // Simple toast notification
@@ -500,6 +600,12 @@ function setupNavigation() {
   document.querySelectorAll('.nav-btn[data-tab]').forEach(btn => {
     btn.addEventListener('click', () => {
       const tab = btn.dataset.tab;
+      // v1.5: pins is a floating overlay, not a regular tab
+      if (tab === 'pins') {
+        const pinsPanel = document.getElementById('pinsPanel');
+        pinsPanel?.classList.contains('hidden') ? showPinsPanel() : hidePinsPanel();
+        return;
+      }
       document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
@@ -615,7 +721,10 @@ function updateTokenCounter() {
   const totalChars = messages.reduce((sum, m) => sum + (m.content || '').length, 0);
   const approxTokens = Math.round(totalChars / 4);
   if (totalChars === 0) { el.textContent = ''; return; }
-  el.textContent = `~${approxTokens.toLocaleString()} tokens`;
+  // v1.5: show estimated cost at ~$0.001 per 1K tokens
+  const costUsd = (approxTokens / 1000) * 0.001;
+  const costStr = costUsd < 0.001 ? '<$0.001' : '$' + costUsd.toFixed(3);
+  el.textContent = `~${approxTokens.toLocaleString()} tokens · ~${costStr}`;
   el.className = 'token-counter' + (approxTokens > 100000 ? ' danger' : approxTokens > 60000 ? ' warn' : '');
 }
 
@@ -655,16 +764,71 @@ function setupChatSearch() {
     });
   }
 
+  // v1.5: highlight matching text inside bubble text nodes
+  function highlightTextInBubble(bubble, query) {
+    const walk = (node) => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        const text = node.textContent;
+        const idx = text.toLowerCase().indexOf(query.toLowerCase());
+        if (idx === -1) return;
+        const before = document.createTextNode(text.slice(0, idx));
+        const mark = document.createElement('mark');
+        mark.textContent = text.slice(idx, idx + query.length);
+        const after = document.createTextNode(text.slice(idx + query.length));
+        const parent = node.parentNode;
+        parent.insertBefore(before, node);
+        parent.insertBefore(mark, node);
+        parent.insertBefore(after, node);
+        parent.removeChild(node);
+      } else if (node.nodeType === Node.ELEMENT_NODE && node.tagName !== 'MARK') {
+        Array.from(node.childNodes).forEach(walk);
+      }
+    };
+    Array.from(bubble.childNodes).forEach(walk);
+  }
+
+  function getSearchFilters() {
+    const dateFilter = document.getElementById('searchDateFilter')?.value || 'all';
+    const roleFilter = document.getElementById('searchRoleFilter')?.value || 'all';
+    return { dateFilter, roleFilter };
+  }
+
+  function matchesFilters(bubble, dateFilter, roleFilter) {
+    const msgEl = bubble.closest('.message');
+    if (!msgEl) return true;
+    // Role filter
+    if (roleFilter === 'user' && !msgEl.classList.contains('user')) return false;
+    if (roleFilter === 'agent' && !msgEl.classList.contains('agent')) return false;
+    // Date filter
+    if (dateFilter !== 'all') {
+      const timeEl = msgEl.querySelector('.msg-time');
+      const msgIdx = Array.from(document.querySelectorAll('.message')).indexOf(msgEl);
+      const msgData = messages[msgIdx];
+      const ts = msgData?.timestamp;
+      if (ts) {
+        const now = Date.now();
+        const age = now - ts;
+        if (dateFilter === 'today' && age > 86400000) return false;
+        if (dateFilter === 'week' && age > 7 * 86400000) return false;
+        if (dateFilter === 'month' && age > 30 * 86400000) return false;
+      }
+    }
+    return true;
+  }
+
   function runSearch(query) {
     clearSearchHighlights();
     searchMatches = [];
     if (!query.trim()) { count.textContent = ''; return; }
     const q = query.toLowerCase();
+    const { dateFilter, roleFilter } = getSearchFilters();
     const bubbles = document.querySelectorAll('.msg-bubble');
     bubbles.forEach(bubble => {
+      if (!matchesFilters(bubble, dateFilter, roleFilter)) return;
       const text = bubble.textContent;
       if (text.toLowerCase().includes(q)) {
         searchMatches.push(bubble);
+        highlightTextInBubble(bubble, query); // v1.5: highlight text
       }
     });
     count.textContent = searchMatches.length ? `${searchMatchIdx + 1}/${searchMatches.length}` : 'No results';
@@ -689,6 +853,9 @@ function setupChatSearch() {
   prev.addEventListener('click', () => { searchMatchIdx--; highlightMatch(); });
   next.addEventListener('click', () => { searchMatchIdx++; highlightMatch(); });
   input.addEventListener('input', () => { searchMatchIdx = 0; runSearch(input.value); });
+  // v1.5: re-run search when filters change
+  document.getElementById('searchDateFilter')?.addEventListener('change', () => { searchMatchIdx = 0; runSearch(input.value); });
+  document.getElementById('searchRoleFilter')?.addEventListener('change', () => { searchMatchIdx = 0; runSearch(input.value); });
   input.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') { closeSearch(); }
     if (e.key === 'Enter')  { e.shiftKey ? searchMatchIdx-- : searchMatchIdx++; highlightMatch(); }
@@ -816,29 +983,99 @@ function switchTab(tabName) {
   if (tabName === 'status') loadStatus();
 }
 
-// ─── Export chat ───────────────────────────────────────────────────────────
+// ─── Export chat (v1.5: modal with format options) ────────────────────────
 function exportChat() {
-  if (!messages.length) return;
+  if (!messages.length) { showToast('No messages to export'); return; }
+  // v1.5: show export format modal
+  const modal = document.getElementById('exportModal');
+  if (modal) { modal.style.display = 'flex'; return; }
+  // Fallback: direct markdown export if modal not in DOM
+  doExport('markdown');
+}
+
+function doExport(format) {
   const session = sessions.find(s => s.id === currentSessionId);
   const sessionName = session?.name || 'Chat';
-  const lines = messages.map(m => {
-    const time = m.timestamp ? new Date(m.timestamp).toLocaleString() : '';
-    const role = m.role === 'user' ? 'You' : 'IronClaw';
-    // Use raw content (not HTML) for markdown export
-    const content = typeof m.content === 'string' ? m.content : '';
-    return `**${role}** ${time ? `(${time})` : ''}\n\n${content}\n`;
-  });
-  const md = `# IronClaw Chat Export: ${sessionName}\n_Exported: ${new Date().toLocaleString()}_\n\n---\n\n` + lines.join('\n---\n\n');
-  const blob = new Blob([md], { type: 'text/markdown' });
+  const activeProfile = agentProfiles.find(p => p.id === activeProfileId);
+  const agentName = activeProfile?.name || 'IronClaw';
+  const dateStr = new Date().toISOString().slice(0, 10);
+  const safeSessionName = sessionName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+
+  if (format === 'markdown') {
+    const lines = messages.map(m => {
+      const time = m.timestamp ? new Date(m.timestamp).toLocaleString() : '';
+      const role = m.role === 'user' ? 'You' : agentName;
+      const content = typeof m.content === 'string' ? m.content : '';
+      return `**${role}**${time ? ` _(${time})_` : ''}\n\n${content}`;
+    });
+    const md = `# IronClaw Chat Export\n\n**Session:** ${sessionName}  \n**Agent:** ${agentName}  \n**Exported:** ${new Date().toLocaleString()}\n\n---\n\n` + lines.join('\n\n---\n\n');
+    triggerDownload(md, `ironclaw-${safeSessionName}-${dateStr}.md`, 'text/markdown');
+
+  } else if (format === 'json') {
+    const data = {
+      exportedAt: new Date().toISOString(),
+      session: { id: currentSessionId, name: sessionName },
+      agent: { id: activeProfileId, name: agentName, host: activeProfile?.host, port: activeProfile?.port },
+      messageCount: messages.length,
+      messages: messages.map(m => ({
+        role: m.role,
+        content: typeof m.content === 'string' ? m.content : '',
+        timestamp: m.timestamp || null,
+        timestampHuman: m.timestamp ? new Date(m.timestamp).toISOString() : null,
+      }))
+    };
+    triggerDownload(JSON.stringify(data, null, 2), `ironclaw-${safeSessionName}-${dateStr}.json`, 'application/json');
+
+  } else if (format === 'text') {
+    const lines = messages.map(m => {
+      const time = m.timestamp ? new Date(m.timestamp).toLocaleString() : '';
+      const role = m.role === 'user' ? 'You' : agentName;
+      const content = typeof m.content === 'string' ? m.content : '';
+      return `[${role}${time ? ' · ' + time : ''}]\n${content}`;
+    });
+    triggerDownload(lines.join('\n\n'), `ironclaw-${safeSessionName}-${dateStr}.txt`, 'text/plain');
+
+  } else if (format === 'clipboard') {
+    const lines = messages.map(m => {
+      const role = m.role === 'user' ? 'You' : agentName;
+      const content = typeof m.content === 'string' ? m.content : '';
+      return `${role}: ${content}`;
+    });
+    navigator.clipboard.writeText(lines.join('\n\n')).then(() => {
+      showToast('✓ Chat copied to clipboard');
+    }).catch(() => showToast('Clipboard access denied'));
+    return;
+  }
+  showToast('Chat exported');
+}
+
+function triggerDownload(content, filename, mimeType) {
+  const blob = new Blob([content], { type: mimeType });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
   a.href     = url;
-  a.download = `ironclaw-${sessionName.toLowerCase().replace(/\s+/g, '-')}-${new Date().toISOString().slice(0, 10)}.md`;
-  // Append to DOM briefly to trigger download, then remove
+  a.download = filename;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+}
+
+function setupExportModal() {
+  const modal = document.getElementById('exportModal');
+  const closeBtn = document.getElementById('exportModalCloseBtn');
+  if (!modal) return;
+
+  modal.querySelectorAll('.export-fmt-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const fmt = btn.dataset.format;
+      modal.style.display = 'none';
+      doExport(fmt);
+    });
+  });
+
+  if (closeBtn) closeBtn.addEventListener('click', () => { modal.style.display = 'none'; });
+  modal.addEventListener('click', (e) => { if (e.target === modal) modal.style.display = 'none'; });
 }
 
 // ─── Clear modal ───────────────────────────────────────────────────────────
@@ -938,6 +1175,7 @@ function setupChat() {
   setupSlashAutocomplete();
   setupPinsPanel();
   setupKeyboardShortcuts();
+  setupExportModal(); // v1.5
 }
 
 // ─── Slash commands ──────────────────────────────────────────────────────

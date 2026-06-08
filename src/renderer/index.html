@@ -23,6 +23,9 @@
         <span class="logo-text">IronClaw</span>
       </div>
 
+      <!-- v1.5: Agent Switcher -->
+      <div class="agent-switcher" id="agentSwitcher"></div>
+
       <nav class="sidebar-nav">
         <button class="nav-btn active" data-tab="chat" title="Chat">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -44,6 +47,14 @@
             <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
           </svg>
           <span>Memory</span>
+        </button>
+        <button class="nav-btn" data-tab="pins" id="pinsNavBtn" title="Pinned Messages">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+            <circle cx="12" cy="10" r="3"/>
+          </svg>
+          <span>Pins</span>
+          <span class="nav-badge" id="pinsNavBadge" style="display:none">0</span>
         </button>
         <button class="nav-btn" data-tab="status" title="Status">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -71,8 +82,8 @@
     <!-- Main Content -->
     <main class="main-content">
 
-      <!-- Agent Profile Bar -->
-      <div class="agent-profile-bar" id="agentProfileBar"></div>
+      <!-- Agent Profile Bar (legacy top-bar, hidden in v1.5 — replaced by sidebar switcher) -->
+      <div class="agent-profile-bar" id="agentProfileBar" style="display:none"></div>
 
       <!-- ── CHAT TAB ─────────────────────────────── -->
       <section class="tab-panel active" id="tab-chat">
@@ -122,12 +133,23 @@
           </div>
         </div>
 
-        <!-- Chat search bar -->
+        <!-- Chat search bar (v1.5: + date/role filters) -->
         <div class="chat-search-bar" id="chatSearchBar">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" style="color:var(--text-dim)">
             <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
           </svg>
           <input type="text" id="chatSearchInput" placeholder="Search messages…" autocomplete="off" />
+          <select class="search-filter-select" id="searchDateFilter" title="Filter by date">
+            <option value="all">All time</option>
+            <option value="today">Today</option>
+            <option value="week">Last 7 days</option>
+            <option value="month">Last 30 days</option>
+          </select>
+          <select class="search-filter-select" id="searchRoleFilter" title="Filter by role">
+            <option value="all">All</option>
+            <option value="user">User only</option>
+            <option value="agent">Agent only</option>
+          </select>
           <span class="chat-search-count" id="chatSearchCount"></span>
           <button class="btn-icon" id="chatSearchPrev" title="Previous">↑</button>
           <button class="btn-icon" id="chatSearchNext" title="Next">↓</button>
@@ -184,6 +206,37 @@
               <span class="dot-pulse"></span> IronClaw is thinking…
             </span>
             <span class="token-counter" id="tokenCounter"></span>
+          </div>
+        </div>
+
+        <!-- v1.5: Export format modal -->
+        <div class="modal-overlay" id="exportModal" style="display:none">
+          <div class="modal-box">
+            <h3>Export Chat</h3>
+            <p style="font-size:12px;color:var(--text-muted)">Choose export format</p>
+            <div class="export-modal-formats">
+              <button class="export-fmt-btn" data-format="markdown">
+                <span class="export-fmt-icon">📄</span>
+                <span class="export-fmt-label">Markdown</span>
+                <span class="export-fmt-desc">Formatted with headers &amp; timestamps</span>
+              </button>
+              <button class="export-fmt-btn" data-format="json">
+                <span class="export-fmt-icon">{ }</span>
+                <span class="export-fmt-label">JSON</span>
+                <span class="export-fmt-desc">Full metadata &amp; structure</span>
+              </button>
+              <button class="export-fmt-btn" data-format="text">
+                <span class="export-fmt-icon">📝</span>
+                <span class="export-fmt-label">Plain Text</span>
+                <span class="export-fmt-desc">Clean readable text</span>
+              </button>
+              <button class="export-fmt-btn" data-format="clipboard">
+                <span class="export-fmt-icon">📋</span>
+                <span class="export-fmt-label">Copy</span>
+                <span class="export-fmt-desc">Copy to clipboard</span>
+              </button>
+            </div>
+            <button class="btn btn-ghost" id="exportModalCloseBtn" style="width:100%;margin-top:4px">Cancel</button>
           </div>
         </div>
 
@@ -335,6 +388,7 @@
                 <option value="dark">Dark (default)</option>
                 <option value="darker">Darker</option>
                 <option value="light">Light</option>
+                <option value="midnight">Midnight Blue</option>
               </select>
             </div>
             <div class="form-group">
