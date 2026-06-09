@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280, initial-scale=1.0">
+<title>IronClaw Companion v1.5 — Search</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f1117; color: #e5e7eb; width: 1280px; height: 800px; overflow: hidden; display: flex; }
+
+  .sidebar { width: 56px; background: #1a1d26; border-right: 1px solid #2a2d3a; display: flex; flex-direction: column; align-items: center; padding: 12px 0; gap: 4px; }
+  .sidebar-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #6b7280; font-size: 16px; }
+  .sidebar-icon.active { background: #252836; color: #e5e7eb; }
+  .sidebar-icon.accent { color: #3b82f6; }
+  .sidebar-spacer { flex: 1; }
+
+  .main { flex: 1; display: flex; flex-direction: column; }
+  .header { height: 52px; background: #13151f; border-bottom: 1px solid #2a2d3a; display: flex; align-items: center; padding: 0 16px; gap: 10px; }
+  .header-avatar { width: 28px; height: 28px; border-radius: 8px; background: #3b82f6; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: white; }
+  .header-name { font-size: 14px; font-weight: 600; }
+  .header-status { font-size: 11px; color: #10b981; }
+  .header-spacer { flex: 1; }
+  .header-btn { padding: 6px 12px; border-radius: 6px; background: #1e2030; border: 1px solid #2a2d3a; color: #9ca3af; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+  .header-btn.active-btn { background: #1a2642; border-color: #2563eb; color: #93c5fd; }
+
+  /* Search overlay */
+  .search-overlay { position: absolute; top: 52px; left: 56px; right: 0; bottom: 0; background: #0d0f18ee; backdrop-filter: blur(8px); z-index: 100; display: flex; flex-direction: column; padding: 20px; }
+  .search-header { margin-bottom: 16px; }
+  .search-input-wrap { display: flex; align-items: center; gap: 10px; background: #1a1d26; border: 1px solid #3b82f6; border-radius: 12px; padding: 10px 16px; }
+  .search-icon { color: #3b82f6; font-size: 16px; }
+  .search-input { flex: 1; background: transparent; border: none; color: #e5e7eb; font-size: 14px; outline: none; }
+  .search-input::placeholder { color: #4b5563; }
+  .search-count { font-size: 12px; color: #6b7280; white-space: nowrap; }
+  .search-close { width: 32px; height: 32px; border-radius: 8px; background: #252836; border: none; color: #9ca3af; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; }
+
+  .search-filters { display: flex; gap: 8px; margin-bottom: 16px; }
+  .filter-chip { padding: 4px 12px; border-radius: 20px; font-size: 11px; border: 1px solid #2a2d3a; color: #9ca3af; cursor: pointer; background: transparent; }
+  .filter-chip.active { background: #1a2642; border-color: #3b82f6; color: #93c5fd; }
+
+  .search-results { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+  .result-item { background: #13151f; border: 1px solid #2a2d3a; border-radius: 10px; padding: 12px 16px; cursor: pointer; transition: all 0.15s; }
+  .result-item:hover { border-color: #3b82f640; background: #1a1d26; }
+  .result-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .result-agent { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px; }
+  .result-session { font-size: 11px; color: #6b7280; }
+  .result-time { font-size: 11px; color: #4b5563; margin-left: auto; }
+  .result-text { font-size: 13px; color: #d1d5db; line-height: 1.5; }
+  .result-text mark { background: #3b82f630; color: #93c5fd; border-radius: 2px; padding: 0 2px; font-style: normal; }
+  .result-role { font-size: 11px; color: #6b7280; margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<div class="sidebar">
+  <div class="sidebar-icon accent">⚔️</div>
+  <div class="sidebar-icon">💬</div>
+  <div class="sidebar-icon">📌</div>
+  <div class="sidebar-icon active">🔍</div>
+  <div class="sidebar-spacer"></div>
+  <div class="sidebar-icon">🧠</div>
+  <div class="sidebar-icon">💼</div>
+  <div class="sidebar-icon">⚙️</div>
+</div>
+
+<div class="main">
+  <div class="header">
+    <div class="header-avatar">IC</div>
+    <div>
+      <div class="header-name">IronClaw Main</div>
+      <div class="header-status">● Connected</div>
+    </div>
+    <div class="header-spacer"></div>
+    <div class="header-btn active-btn">🔍 Search</div>
+    <div class="header-btn">📤 Export</div>
+    <div class="header-btn">⚙️</div>
+  </div>
+
+  <!-- Search overlay -->
+  <div class="search-overlay">
+    <div class="search-header">
+      <div class="search-input-wrap">
+        <span class="search-icon">🔍</span>
+        <input class="search-input" type="text" value="docker compose" placeholder="Search conversation history...">
+        <span class="search-count">12 results</span>
+        <button class="search-close">✕</button>
+      </div>
+    </div>
+    <div class="search-filters">
+      <button class="filter-chip active">All Agents</button>
+      <button class="filter-chip">IronClaw Main</button>
+      <button class="filter-chip">Code Specialist</button>
+      <button class="filter-chip">Research Agent</button>
+      <button class="filter-chip active">All Sessions</button>
+      <button class="filter-chip" style="margin-left:auto; color:#e05252; border-color:#e05252;">This Session Only</button>
+    </div>
+    <div class="search-results">
+      <div class="result-item">
+        <div class="result-meta">
+          <span class="result-agent" style="background:#3b82f620; color:#3b82f6;">IronClaw Main</span>
+          <span class="result-session">Session: Debug</span>
+          <span class="result-time">2h ago</span>
+        </div>
+        <div class="result-text">To set up <mark>docker compose</mark> with environment variables, create a <mark>docker compose</mark>.yml file and define your services with the <code>environment</code> key...</div>
+        <div class="result-role">🤖 Assistant</div>
+      </div>
+      <div class="result-item" style="border-color:#3b82f640;">
+        <div class="result-meta">
+          <span class="result-agent" style="background:#10b98120; color:#10b981;">Code Specialist</span>
+          <span class="result-session">Session: Backend</span>
+          <span class="result-time">Yesterday</span>
+        </div>
+        <div class="result-text">Here's a production-ready <mark>docker compose</mark> setup for Node.js with Redis and PostgreSQL. This configuration handles health checks and automatic restarts...</div>
+        <div class="result-role">🤖 Assistant</div>
+      </div>
+      <div class="result-item">
+        <div class="result-meta">
+          <span class="result-agent" style="background:#3b82f620; color:#3b82f6;">IronClaw Main</span>
+          <span class="result-session">Session: Planning</span>
+          <span class="result-time">2 days ago</span>
+        </div>
+        <div class="result-text">Can you help me understand <mark>docker compose</mark> networking? I want my frontend container to talk to the backend...</div>
+        <div class="result-role">👤 You</div>
+      </div>
+      <div class="result-item">
+        <div class="result-meta">
+          <span class="result-agent" style="background:#8b5cf620; color:#8b5cf6;">Research Agent</span>
+          <span class="result-session">Session: DevOps Research</span>
+          <span class="result-time">3 days ago</span>
+        </div>
+        <div class="result-text"><mark>Docker Compose</mark> vs Kubernetes: For local development and small deployments, <mark>Docker Compose</mark> is significantly simpler. Kubernetes shines at scale with 10+ services and complex traffic routing...</div>
+        <div class="result-role">🤖 Assistant</div>
+      </div>
+      <div class="result-item">
+        <div class="result-meta">
+          <span class="result-agent" style="background:#3b82f620; color:#3b82f6;">IronClaw Main</span>
+          <span class="result-session">Session 1</span>
+          <span class="result-time">4 days ago</span>
+        </div>
+        <div class="result-text">The <mark>docker compose</mark> up --build command rebuilds your images before starting. Use -d flag to run in detached mode: <code>docker compose up --build -d</code></div>
+        <div class="result-role">🤖 Assistant</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
